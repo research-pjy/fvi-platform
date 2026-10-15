@@ -1,35 +1,36 @@
 #!/usr/bin/env python3
 """
-FastAPI Web Server & Zero-Disk In-RAM REST API for FedAssess (`fvi-platform`).
+FastAPI Web Server & REST API for FedAssess (`fvi-platform`).
 
-Key Privacy & Storage Guarantee:
-  - Dropped datasets from the Web UI are parsed/resized locally in the user's
-    browser and either:
-      (Mode A) Trained 100% inside the user's browser tab (0 bytes sent to server), OR
-      (Mode B) Sent as a compact numerical tensor to `POST /api/run-in-memory-benchmark`,
-               where `rama` holds the tensor purely in RAM during L40S GPU training
-               and immediately garbage-collects it upon completion—writing ZERO
-               uploaded files to `rama`'s hard drive!
+Architecture (Restored Fast v3 Server Execution + [0.000, 1.000] FVI Scale):
+  1. Direct Binary Drag-and-Drop Uploads (`POST /api/upload-dataset` & `POST /api/upload-folder`):
+     - Streams `.csv` files, `.zip` image archives, or dropped image folders
+       directly to `data/uploads/` in binary chunks (zero browser lag).
+  2. Full Server-Side Python / PyTorch Execution (`POST /api/run-benchmark`):
+     - Runs data preprocessing, client partitioning, Golden Triad training, and
+       [0.000, 1.000] FVI calculation natively on the server (`rama` L40S or local CPU/GPU).
 """
 
 from __future__ import annotations
 
 import argparse
-import gc
+import cgi
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import io
 import json
 import os
 from pathlib import Path
 import platform
+import re
 import shutil
 import socket
 import sys
 import threading
+import time
 import traceback
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 from urllib.parse import urlparse
-
-import numpy as np
+import zipfile
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR / "src") not in sys.path:
@@ -43,22 +44,12 @@ from fvi.config import (
     ModelConfig,
     PartitionConfig,
 )
-from fvi.ingestion.loader import (
-    LoadedDatasetBundle,
-    bundle_from_in_memory_arrays,
-    load_and_preprocess_dataset,
-)
-from fvi.ingestion.schema import inspect_dataset_source
+from fvi.ingestion.schema import IMAGE_EXTENSIONS, inspect_dataset_source
 from fvi.models.factory import TORCH_AVAILABLE
-from fvi.pipeline import (
-    preview_partition_from_bundle,
-    preview_partition_only,
-    run_fvi_benchmark_pipeline,
-    run_fvi_on_loaded_bundle,
-)
+from fvi.pipeline import preview_partition_only, run_fvi_benchmark_pipeline
 
 try:
-    from fastapi import FastAPI, Request
+    from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
     from fastapi.responses import HTMLResponse, JSONResponse
     import uvicorn
 
@@ -68,6 +59,8 @@ except ImportError:
 
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+DATA_DIR = ROOT_DIR / "data"
+UPLOADS_DIR = DATA_DIR / "uploads"
 
 _JOB_LOCK = threading.Lock()
 _JOB_STATE: Dict[str, Any] = {
@@ -80,7 +73,7 @@ _JOB_STATE: Dict[str, Any] = {
 
 
 def get_system_status() -> Dict[str, Any]:
-    """Returns hardware, environment, and RAM/GPU status for the UI header."""
+    """Returns hardware, environment, and disk space metadata for the UI header."""
     hostname = socket.gethostname()
     conda_env = (
         os.environ.get("CONDA_DEFAULT_ENV")
@@ -105,6 +98,9 @@ def get_system_status() -> Dict[str, Any]:
         else:
             gpu_name = "PyTorch CPU"
 
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    disk_free_gib = round(shutil.disk_usage(UPLOADS_DIR).free / (1024.0 ** 3), 1)
+
     return {
         "hostname": hostname,
         "conda_env": conda_env,
@@ -114,28 +110,148 @@ def get_system_status() -> Dict[str, Any]:
         "gpu_name": gpu_name,
         "vram_gib": vram_gib,
         "bf16_supported": bf16_ok,
-        "zero_disk_storage": True,
+        "disk_free_gib": disk_free_gib,
+        "uploads_dir": str(UPLOADS_DIR),
     }
 
 
-def _parse_job_config(payload: Dict[str, Any], require_path: bool = True) -> FVJobConfig:
+def _sanitize_filename(name: str) -> str:
+    clean = re.sub(r"[^A-Za-z0-9._-]", "_", Path(name).name)
+    return clean or f"dataset_{int(time.time())}.csv"
+
+
+def _find_image_folder_root(extract_dir: Path) -> Path:
+    """
+    Walks an extracted directory to find the folder whose subdirectories are
+    class folders containing images.
+    """
+    candidates = [extract_dir] + [
+        p for p in extract_dir.rglob("*") if p.is_dir() and "__MACOSX" not in p.parts
+    ]
+    for cand in candidates:
+        subdirs = [
+            d
+            for d in cand.iterdir()
+            if d.is_dir() and not d.name.startswith(".") and d.name != "__MACOSX"
+        ]
+        if not subdirs:
+            continue
+        has_images = any(
+            any(
+                f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS
+                for f in sd.iterdir()
+            )
+            for sd in subdirs
+        )
+        if has_images:
+            return cand
+    return extract_dir
+
+
+def save_uploaded_dataset_bytes(filename: str, raw_bytes: bytes) -> Dict[str, Any]:
+    """
+    Saves an uploaded `.csv` file or extracts an uploaded `.zip` archive into
+    `data/uploads/`, then inspects and returns its schema report.
+    """
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    safe_name = _sanitize_filename(filename)
+    suffix = Path(safe_name).suffix.lower()
+
+    if suffix == ".zip":
+        stem = Path(safe_name).stem
+        extract_target = UPLOADS_DIR / stem
+        if extract_target.exists():
+            shutil.rmtree(extract_target)
+        extract_target.mkdir(parents=True, exist_ok=True)
+
+        with zipfile.ZipFile(io.BytesIO(raw_bytes)) as zf:
+            zf.extractall(extract_target)
+
+        img_root = _find_image_folder_root(extract_target)
+        rel_path = str(img_root.relative_to(ROOT_DIR))
+        report = inspect_dataset_source(img_root)
+        rep_dict = report.to_dict()
+        rep_dict["data_path"] = rel_path
+        rep_dict["uploaded_filename"] = safe_name
+        rep_dict["uploaded_size_mb"] = round(len(raw_bytes) / (1024.0 ** 2), 2)
+        return rep_dict
+
+    if suffix == ".csv":
+        saved_path = UPLOADS_DIR / safe_name
+        saved_path.write_bytes(raw_bytes)
+        rel_path = f"data/uploads/{safe_name}"
+        report = inspect_dataset_source(saved_path)
+        rep_dict = report.to_dict()
+        rep_dict["data_path"] = rel_path
+        rep_dict["uploaded_filename"] = safe_name
+        rep_dict["uploaded_size_mb"] = round(len(raw_bytes) / (1024.0 ** 2), 2)
+        return rep_dict
+
+    raise ValueError(
+        f"Unsupported file format '{suffix}'. Please drop a .csv file, a .zip archive, or an image folder."
+    )
+
+
+def save_uploaded_folder_files(
+    folder_name: str, rel_paths: List[str], file_bytes_list: List[bytes]
+) -> Dict[str, Any]:
+    """
+    Reconstructs a dropped ImageFolder directory (`root/<ClassName>/<image.png>`)
+    inside `data/uploads/<folder_name>/` from binary multipart file uploads.
+    """
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    safe_folder = _sanitize_filename(folder_name or "image_dataset")
+    target_root = UPLOADS_DIR / safe_folder
+    if target_root.exists():
+        shutil.rmtree(target_root)
+    target_root.mkdir(parents=True, exist_ok=True)
+
+    total_bytes = 0
+    for rel, b_data in zip(rel_paths, file_bytes_list):
+        parts = [
+            _sanitize_filename(p)
+            for p in rel.replace("\\", "/").split("/")
+            if p and not p.startswith(".")
+        ]
+        if not parts:
+            continue
+        # Preserve `<ClassName>/<filename>` structure
+        if len(parts) >= 2:
+            sub_path = target_root / parts[-2] / parts[-1]
+        else:
+            sub_path = target_root / "Class_0" / parts[-1]
+        sub_path.parent.mkdir(parents=True, exist_ok=True)
+        sub_path.write_bytes(b_data)
+        total_bytes += len(b_data)
+
+    img_root = _find_image_folder_root(target_root)
+    rel_path = str(img_root.relative_to(ROOT_DIR))
+    report = inspect_dataset_source(img_root)
+    rep_dict = report.to_dict()
+    rep_dict["data_path"] = rel_path
+    rep_dict["uploaded_filename"] = safe_folder
+    rep_dict["uploaded_size_mb"] = round(total_bytes / (1024.0 ** 2), 2)
+    return rep_dict
+
+
+def _parse_job_config(payload: Dict[str, Any]) -> FVJobConfig:
     ds_raw = payload.get("dataset", {})
     part_raw = payload.get("partition", {})
     mod_raw = payload.get("model", {})
     bench_raw = payload.get("benchmark", {})
 
     raw_path = str(ds_raw.get("data_path", "")).strip()
-    if require_path and not raw_path:
-        raise ValueError("No dataset path specified.")
+    if not raw_path:
+        raise ValueError("No dataset selected. Please drop a dataset file first.")
 
-    resolved_path = Path(raw_path) if raw_path else Path("in_memory")
-    if raw_path and not resolved_path.is_absolute() and not resolved_path.exists():
+    resolved_path = Path(raw_path)
+    if not resolved_path.is_absolute() and not resolved_path.exists():
         resolved_path = ROOT_DIR / raw_path
 
     ds_cfg = DatasetConfig(
         data_path=str(resolved_path),
-        modality=str(ds_raw.get("modality", "tabular")),
-        target_column=str(ds_raw.get("target_column", "target")),
+        modality=str(ds_raw.get("modality", "auto")),
+        target_column=str(ds_raw.get("target_column", "")),
         feature_columns=ds_raw.get("feature_columns", ["all"]),
         image_path_column=ds_raw.get("image_path_column", "image_path"),
         image_size=int(ds_raw.get("image_size", 32)),
@@ -194,68 +310,22 @@ def _parse_job_config(payload: Dict[str, Any], require_path: bool = True) -> FVJ
         model=mod_cfg,
         benchmark=bench_cfg,
         hardware=HardwareConfig(),
-        output_dir="",
+        output_dir=str(ROOT_DIR / "outputs" / "web_latest"),
     )
 
 
-def _build_in_memory_bundle_from_payload(
-    payload: Dict[str, Any]
-) -> Tuple[LoadedDatasetBundle, FVJobConfig, str]:
-    """
-    Constructs a `LoadedDatasetBundle` purely in RAM from browser-preprocessed
-    arrays (`X`, `y`, `class_names`, `feature_names`, `image_shape`).
-    Zero files are ever written to disk.
-    """
-    mem_data = payload.get("in_memory_data")
-    if not mem_data:
-        raise ValueError("Missing 'in_memory_data' payload.")
-
-    X_raw = np.asarray(mem_data["X"], dtype=np.float32)
-    y_raw = np.asarray(mem_data["y"], dtype=np.int64)
-    modality = str(mem_data.get("modality", "tabular"))
-    class_names = list(mem_data.get("class_names", []))
-    feature_names = list(mem_data.get("feature_names", []))
-    img_shape_raw = mem_data.get("image_shape")
-    image_shape = (
-        (int(img_shape_raw[0]), int(img_shape_raw[1]), int(img_shape_raw[2]))
-        if img_shape_raw and len(img_shape_raw) == 3
-        else None
-    )
-    dataset_label = str(mem_data.get("dataset_name", "In-Memory Dataset"))
-
-    job_cfg = _parse_job_config(payload, require_path=False)
-    bundle = bundle_from_in_memory_arrays(
-        X_raw=X_raw,
-        y_raw=y_raw,
-        modality=modality,
-        class_names=class_names,
-        feature_names=feature_names,
-        image_shape=image_shape,
-        seed=job_cfg.dataset.seed,
-    )
-    return bundle, job_cfg, dataset_label
-
-
-def _background_in_memory_worker(
-    bundle: LoadedDatasetBundle, job_cfg: FVJobConfig, dataset_label: str
-) -> None:
+def _background_benchmark_worker(job_cfg: FVJobConfig) -> None:
     def _cb(pct: int, msg: str) -> None:
         with _JOB_LOCK:
             _JOB_STATE["progress"] = pct
             _JOB_STATE["message"] = msg
 
     try:
-        res = run_fvi_on_loaded_bundle(
-            bundle=bundle,
-            job_cfg=job_cfg,
-            dataset_label=dataset_label,
-            progress_cb=_cb,
-            save_artifacts_to_disk=False,  # Zero disk storage on rama!
-        )
+        res = run_fvi_benchmark_pipeline(job_cfg, progress_cb=_cb)
         with _JOB_LOCK:
             _JOB_STATE["running"] = False
             _JOB_STATE["progress"] = 100
-            _JOB_STATE["message"] = "Completed (RAM buffer cleared)"
+            _JOB_STATE["message"] = "Completed"
             _JOB_STATE["result"] = res
             _JOB_STATE["error"] = None
     except Exception as exc:
@@ -264,17 +334,17 @@ def _background_in_memory_worker(
             _JOB_STATE["running"] = False
             _JOB_STATE["error"] = str(exc)
             _JOB_STATE["message"] = f"Error: {exc}"
-    finally:
-        # Explicitly release RAM tensors immediately after the run
-        del bundle
-        gc.collect()
 
 
 if FASTAPI_AVAILABLE:
     fastapi_app = FastAPI(
         title="FedAssess — Federated Viability Index (FVI)",
-        version="0.4.0",
+        version="0.5.0",
     )
+
+    @fastapi_app.on_event("startup")
+    def _on_startup() -> None:
+        UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
     @fastapi_app.get("/", response_class=HTMLResponse)
     async def serve_index() -> HTMLResponse:
@@ -290,36 +360,68 @@ if FASTAPI_AVAILABLE:
         with _JOB_LOCK:
             return JSONResponse(content=dict(_JOB_STATE))
 
-    @fastapi_app.post("/api/preview-in-memory-partition")
-    async def api_preview_in_memory_partition(request: Request) -> JSONResponse:
+    @fastapi_app.post("/api/upload-dataset")
+    async def api_upload_dataset(file: UploadFile = File(...)) -> JSONResponse:
+        try:
+            raw_bytes = await file.read()
+            if not raw_bytes:
+                return JSONResponse(
+                    content={"error": "Uploaded file is empty."}, status_code=400
+                )
+            rep_dict = save_uploaded_dataset_bytes(
+                file.filename or "dataset.csv", raw_bytes
+            )
+            return JSONResponse(content=rep_dict)
+        except Exception as exc:
+            return JSONResponse(content={"error": str(exc)}, status_code=400)
+
+    @fastapi_app.post("/api/upload-folder")
+    async def api_upload_folder(
+        folder_name: str = Form("image_dataset"),
+        rel_paths: List[str] = Form(...),
+        files: List[UploadFile] = File(...),
+    ) -> JSONResponse:
+        try:
+            bytes_list = [await f.read() for f in files]
+            rep_dict = save_uploaded_folder_files(folder_name, rel_paths, bytes_list)
+            return JSONResponse(content=rep_dict)
+        except Exception as exc:
+            return JSONResponse(content={"error": str(exc)}, status_code=400)
+
+    @fastapi_app.post("/api/inspect-dataset")
+    async def api_inspect_dataset(request: Request) -> JSONResponse:
+        payload = await request.json()
+        raw_path = str(payload.get("data_path", "")).strip()
+        target_col = payload.get("target_column")
+        p = Path(raw_path)
+        if not p.is_absolute() and not p.exists():
+            p = ROOT_DIR / raw_path
+        report = inspect_dataset_source(p, target_column=target_col)
+        report_dict = report.to_dict()
+        report_dict["data_path"] = raw_path
+        return JSONResponse(content=report_dict)
+
+    @fastapi_app.post("/api/preview-partition")
+    async def api_preview_partition(request: Request) -> JSONResponse:
         payload = await request.json()
         try:
-            bundle, job_cfg, _ = _build_in_memory_bundle_from_payload(payload)
-            preview_data = preview_partition_from_bundle(bundle, job_cfg)
-            del bundle
-            gc.collect()
+            job_cfg = _parse_job_config(payload)
+            preview_data = preview_partition_only(job_cfg)
             return JSONResponse(content=preview_data)
         except Exception as exc:
             return JSONResponse(content={"error": str(exc)}, status_code=400)
 
-    @fastapi_app.post("/api/run-in-memory-benchmark")
-    async def api_run_in_memory_benchmark(request: Request) -> JSONResponse:
+    @fastapi_app.post("/api/run-benchmark")
+    async def api_run_benchmark(request: Request) -> JSONResponse:
         payload = await request.json()
         synchronous = bool(payload.get("synchronous", False))
         try:
-            bundle, job_cfg, dataset_label = _build_in_memory_bundle_from_payload(payload)
+            job_cfg = _parse_job_config(payload)
         except Exception as exc:
             return JSONResponse(content={"error": str(exc)}, status_code=400)
 
         if synchronous:
-            res = run_fvi_on_loaded_bundle(
-                bundle=bundle,
-                job_cfg=job_cfg,
-                dataset_label=dataset_label,
-                save_artifacts_to_disk=False,
-            )
-            del bundle
-            gc.collect()
+            res = run_fvi_benchmark_pipeline(job_cfg)
             return JSONResponse(content={"status": "completed", "result": res})
 
         with _JOB_LOCK:
@@ -329,15 +431,13 @@ if FASTAPI_AVAILABLE:
                     status_code=409,
                 )
             _JOB_STATE["running"] = True
-            _JOB_STATE["progress"] = 4
-            _JOB_STATE["message"] = "Running ephemeral in-RAM evaluation on server..."
+            _JOB_STATE["progress"] = 2
+            _JOB_STATE["message"] = "Preparing Federated Viability evaluation..."
             _JOB_STATE["error"] = None
             _JOB_STATE["result"] = None
 
         t = threading.Thread(
-            target=_background_in_memory_worker,
-            args=(bundle, job_cfg, dataset_label),
-            daemon=True,
+            target=_background_benchmark_worker, args=(job_cfg,), daemon=True
         )
         t.start()
         return JSONResponse(content={"status": "started"})
@@ -385,40 +485,83 @@ class FVIRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         route = urlparse(self.path).path
+
+        if route in ("/api/upload-dataset", "/api/upload-folder"):
+            ctype = self.headers.get("Content-Type", "")
+            if "multipart/form-data" in ctype:
+                form = cgi.FieldStorage(
+                    fp=self.rfile,
+                    headers=self.headers,
+                    environ={"REQUEST_METHOD": "POST", "CONTENT_TYPE": ctype},
+                )
+                if route == "/api/upload-dataset":
+                    if "file" not in form:
+                        self._send_json({"error": "Missing file field."}, status=400)
+                        return
+                    file_item = form["file"]
+                    filename = file_item.filename or "dataset.csv"
+                    raw_bytes = file_item.file.read()
+                    try:
+                        rep = save_uploaded_dataset_bytes(filename, raw_bytes)
+                        self._send_json(rep)
+                    except Exception as exc:
+                        self._send_json({"error": str(exc)}, status=400)
+                    return
+                else:
+                    folder_name = form.getvalue("folder_name", "image_dataset")
+                    rel_raw = form["rel_paths"] if "rel_paths" in form else []
+                    files_raw = form["files"] if "files" in form else []
+                    if not isinstance(rel_raw, list):
+                        rel_raw = [rel_raw]
+                    if not isinstance(files_raw, list):
+                        files_raw = [files_raw]
+                    rel_paths = [item.value for item in rel_raw]
+                    bytes_list = [item.file.read() for item in files_raw]
+                    try:
+                        rep = save_uploaded_folder_files(
+                            str(folder_name), rel_paths, bytes_list
+                        )
+                        self._send_json(rep)
+                    except Exception as exc:
+                        self._send_json({"error": str(exc)}, status=400)
+                    return
+
         try:
             payload = self._read_json_body()
         except Exception as exc:
             self._send_json({"error": f"Invalid JSON: {exc}"}, status=400)
             return
 
-        if route == "/api/preview-in-memory-partition":
+        if route == "/api/inspect-dataset":
+            raw_path = str(payload.get("data_path", "")).strip()
+            target_col = payload.get("target_column")
+            p = Path(raw_path)
+            if not p.is_absolute() and not p.exists():
+                p = ROOT_DIR / raw_path
+            report = inspect_dataset_source(p, target_column=target_col)
+            rep_dict = report.to_dict()
+            rep_dict["data_path"] = raw_path
+            self._send_json(rep_dict)
+            return
+
+        if route == "/api/preview-partition":
             try:
-                bundle, job_cfg, _ = _build_in_memory_bundle_from_payload(payload)
-                prev = preview_partition_from_bundle(bundle, job_cfg)
-                del bundle
-                gc.collect()
-                self._send_json(prev)
+                job_cfg = _parse_job_config(payload)
+                self._send_json(preview_partition_only(job_cfg))
             except Exception as exc:
                 self._send_json({"error": str(exc)}, status=400)
             return
 
-        if route == "/api/run-in-memory-benchmark":
+        if route == "/api/run-benchmark":
             synchronous = bool(payload.get("synchronous", False))
             try:
-                bundle, job_cfg, dataset_label = _build_in_memory_bundle_from_payload(payload)
+                job_cfg = _parse_job_config(payload)
             except Exception as exc:
                 self._send_json({"error": str(exc)}, status=400)
                 return
 
             if synchronous:
-                res = run_fvi_on_loaded_bundle(
-                    bundle=bundle,
-                    job_cfg=job_cfg,
-                    dataset_label=dataset_label,
-                    save_artifacts_to_disk=False,
-                )
-                del bundle
-                gc.collect()
+                res = run_fvi_benchmark_pipeline(job_cfg)
                 self._send_json({"status": "completed", "result": res})
                 return
 
@@ -427,15 +570,13 @@ class FVIRequestHandler(BaseHTTPRequestHandler):
                     self._send_json({"error": "Job already running"}, status=409)
                     return
                 _JOB_STATE["running"] = True
-                _JOB_STATE["progress"] = 4
-                _JOB_STATE["message"] = "Running ephemeral in-RAM evaluation on server..."
+                _JOB_STATE["progress"] = 2
+                _JOB_STATE["message"] = "Preparing Federated Viability evaluation..."
                 _JOB_STATE["error"] = None
                 _JOB_STATE["result"] = None
 
             t = threading.Thread(
-                target=_background_in_memory_worker,
-                args=(bundle, job_cfg, dataset_label),
-                daemon=True,
+                target=_background_benchmark_worker, args=(job_cfg,), daemon=True
             )
             t.start()
             self._send_json({"status": "started"})
@@ -445,14 +586,15 @@ class FVIRequestHandler(BaseHTTPRequestHandler):
 
 
 def run_server(host: str = "127.0.0.1", port: int = 8080) -> None:
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
     status = get_system_status()
     print("=" * 74)
-    print("  FEDASSESS — FEDERATED VIABILITY INDEX (FVI) PLATFORM")
+    print("  FEDASSESS — FEDERATED VIABILITY INDEX (FVI in [0.000, 1.000])")
     print("=" * 74)
     print(f"  Host / Node      : {status['hostname']} (Env: {status['conda_env']})")
     print(f"  Web Framework    : {status['web_framework']}")
     print(f"  Compute Device   : {status['gpu_name']} ({status['backend']}, BF16: {status['bf16_supported']})")
-    print("  Storage Policy   : ZERO DISK STORAGE (100% Browser or Ephemeral In-RAM)")
+    print(f"  Uploads Storage  : {status['uploads_dir']} ({status['disk_free_gib']} GiB free)")
     print(f"  Web URL          : http://{host}:{port}")
     print("=" * 74)
 
