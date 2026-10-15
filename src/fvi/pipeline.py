@@ -1,17 +1,11 @@
 """
 Master Orchestration Pipeline (`FVIPipeline`) for the Federated Viability Index Platform.
 
-Coordinates:
-  1. Dataset loading & preprocessing (`fvi.ingestion`)
-  2. Simulated client partitioning & entropy diagnostics (`fvi.partition`)
-  3. Mode 1 unified model instantiation (`fvi.models`)
-  4. Execution of the Golden Triad:
-     - Centralized Upper Bound
-     - Isolated Local Silos (Lower Bound)
-     - Optional IID Reference Run (for Heterogeneity Resilience `HR`)
-     - Selected Federated Learning Strategies (`FedAvg`, `FedProx`, `FedAdam`, `FENS`)
-  5. Synthesis of the 0-100 Federated Viability Index (`FVIScorecard`), diagnostic
-     charts, and downloadable Markdown & JSON reports.
+Supports both:
+  1. Zero-Disk Ephemeral In-RAM Execution (`run_fvi_on_loaded_bundle`) where
+     browser-preprocessed arrays are evaluated in `rama`'s RAM without ever
+     writing dataset files to disk.
+  2. File-based CLI/Server Execution (`run_fvi_benchmark_pipeline`).
 """
 
 from __future__ import annotations
@@ -22,7 +16,7 @@ from pathlib import Path
 import time
 from typing import Any, Callable, Dict, List, Optional
 
-from fvi.config import FVJobConfig, PartitionConfig
+from fvi.config import FVJobConfig
 from fvi.engines.benchmark_runner import (
     AlgorithmRunResult,
     run_centralized_upper_bound,
@@ -30,7 +24,7 @@ from fvi.engines.benchmark_runner import (
     run_isolated_local_silos,
     run_iterative_fl,
 )
-from fvi.ingestion.loader import load_and_preprocess_dataset
+from fvi.ingestion.loader import LoadedDatasetBundle, load_and_preprocess_dataset
 from fvi.metrics.fvi_calculator import compute_fvi_scorecard
 from fvi.metrics.plots import (
     plot_benchmark_dashboard_base64,
@@ -43,12 +37,9 @@ from fvi.partition.splitter import partition_dataset
 ProgressCallback = Callable[[int, str], None]
 
 
-def preview_partition_only(job_cfg: FVJobConfig) -> Dict[str, Any]:
-    """
-    Fast (<1 second) partition preview called by the Web UI when the user clicks
-    "Preview Client Partition" before launching training.
-    """
-    bundle = load_and_preprocess_dataset(job_cfg.dataset)
+def preview_partition_from_bundle(
+    bundle: LoadedDatasetBundle, job_cfg: FVJobConfig
+) -> Dict[str, Any]:
     partition = partition_dataset(
         bundle.y_train, job_cfg.partition, num_classes=bundle.num_classes
     )
@@ -74,36 +65,41 @@ def preview_partition_only(job_cfg: FVJobConfig) -> Dict[str, Any]:
     }
 
 
+def preview_partition_only(job_cfg: FVJobConfig) -> Dict[str, Any]:
+    bundle = load_and_preprocess_dataset(job_cfg.dataset)
+    return preview_partition_from_bundle(bundle, job_cfg)
+
+
 def _generate_markdown_report(
-    job_cfg: FVJobConfig,
+    dataset_label: str,
+    target_label: str,
     partition_summary: Dict[str, Any],
     model_spec_dict: Dict[str, Any],
     scorecard_dict: Dict[str, Any],
     isolated_dict: Dict[str, Any],
-    fl_results_dicts: List[Dict[str, Any]],
 ) -> str:
     lines = [
         "# Federated Viability Index (FVI) Benchmark Report",
         "",
-        f"- **Dataset Source:** `{job_cfg.dataset.data_path}` (`{model_spec_dict['modality']}`)",
-        f"- **Target Variable:** `{job_cfg.dataset.target_column}` ({model_spec_dict['num_classes']} classes: `{', '.join(partition_summary['class_names'])}`)",
-        f"- **Client Partitioning:** {partition_summary['description']} (Mean Client Entropy = `{partition_summary['mean_normalized_entropy']}`)",
+        f"- **Dataset:** `{dataset_label}` (`{model_spec_dict['modality']}`)",
+        f"- **Target Variable:** `{target_label}` ({model_spec_dict['num_classes']} classes: `{', '.join(partition_summary['class_names'])}`)",
+        f"- **Client Partitioning:** {partition_summary['description']} (Mean Client Entropy = `{partition_summary['mean_normalized_entropy']:.3f}`)",
         f"- **Mode 1 Unified Client Model:** `{model_spec_dict['arch_name']}` (`{model_spec_dict['num_parameters']:,}` parameters, `{model_spec_dict['fp32_size_mib']:.3f} MiB` in FP32)",
         "",
-        "## 1. Executive Scorecard: Federated Viability Index (FVI)",
+        "## 1. Executive Scorecard: Federated Viability Index (FVI in [0.000, 1.000])",
         "",
-        f"- **Composite FVI Score:** **{scorecard_dict['overall_fvi_score']:.1f} / 100** (**{scorecard_dict['verdict_tier']}**)",
+        f"- **Composite FVI:** **{scorecard_dict['overall_fvi_score']:.3f}** (**{scorecard_dict['verdict_tier']}**)",
         f"- **Top Federated Strategy:** **{scorecard_dict['best_fl_algorithm']}** (`{scorecard_dict['best_fl_accuracy']:.2f}%` Test Accuracy | `{scorecard_dict['best_fl_macro_f1']:.2f}%` Macro-F1)",
-        f"- **Centralized Parity Ratio (CPR):** `{scorecard_dict['cpr_score']:.1f}%` (Centralized Upper Bound = `{scorecard_dict['centralized_accuracy']:.2f}%`)",
-        f"- **Collaboration Gain (CG):** `{scorecard_dict['cg_score']:.1f}%` (Isolated Silos Weighted Mean = `{scorecard_dict['isolated_weighted_accuracy']:.2f}%`)",
-        f"- **Heterogeneity Resilience (HR):** `{scorecard_dict['hr_score']:.1f}%` (IID Reference = `{scorecard_dict['iid_reference_accuracy']:.2f}%`)",
+        f"- **Centralized Parity Ratio (CPR):** `{scorecard_dict['cpr_score']:.3f}` (Centralized Upper Bound = `{scorecard_dict['centralized_accuracy']:.2f}%`)",
+        f"- **Collaboration Gain (CG):** `{scorecard_dict['cg_score']:.3f}` (Isolated Silos Weighted Mean = `{scorecard_dict['isolated_weighted_accuracy']:.2f}%`)",
+        f"- **Heterogeneity Resilience (HR):** `{scorecard_dict['hr_score']:.3f}` (IID Reference = `{scorecard_dict['iid_reference_accuracy']:.2f}%`)",
         "",
         f"> **Assessment:** {scorecard_dict['executive_summary']}",
         f"> **Recommendation:** {scorecard_dict['recommendation']}",
         "",
         "## 2. Golden Triad & Federated Algorithm Comparison",
         "",
-        "| Benchmark / Strategy | Test Accuracy (%) | Macro-F1 (%) | Delta vs. Centralized | Gain vs. Isolated Silos | Client Comm. (MiB) | FVI Score |",
+        "| Benchmark / Strategy | Test Accuracy (%) | Macro-F1 (%) | Delta vs. Centralized | Gain vs. Isolated Silos | Client Comm. (MiB) | FVI [0–1] |",
         "| :--- | ---: | ---: | ---: | ---: | ---: | ---: |",
         f"| **Centralized (Pooled Upper Bound)** | **{scorecard_dict['centralized_accuracy']:.2f}%** | {scorecard_dict['centralized_macro_f1']:.2f}% | 0.00% | {scorecard_dict['centralized_accuracy'] - scorecard_dict['isolated_weighted_accuracy']:+.2f}% | 0.000 | — |",
         f"| **Isolated Client Silos (Lower Bound)** | **{scorecard_dict['isolated_weighted_accuracy']:.2f}%** | {scorecard_dict['isolated_weighted_macro_f1']:.2f}% | {scorecard_dict['isolated_weighted_accuracy'] - scorecard_dict['centralized_accuracy']:+.2f}% | 0.00% | 0.000 | — |",
@@ -113,7 +109,7 @@ def _generate_markdown_report(
         lines.append(
             f"| **{entry['algorithm_name']}** | **{entry['test_accuracy']:.2f}%** | {entry['test_macro_f1']:.2f}% | "
             f"{entry['delta_vs_centralized']:+.2f}% | {entry['gain_over_isolated']:+.2f}% | "
-            f"{entry['comm_mib']:.3f} | **{entry['fvi_score']:.1f}** |"
+            f"{entry['comm_mib']:.3f} | **{entry['fvi_score']:.3f}** |"
         )
 
     lines.extend(
@@ -136,27 +132,28 @@ def _generate_markdown_report(
     return "\n".join(lines) + "\n"
 
 
-def run_fvi_benchmark_pipeline(
+def run_fvi_on_loaded_bundle(
+    bundle: LoadedDatasetBundle,
     job_cfg: FVJobConfig,
+    dataset_label: str = "In-Memory Dataset",
     progress_cb: Optional[ProgressCallback] = None,
+    save_artifacts_to_disk: bool = False,
 ) -> Dict[str, Any]:
     """
-    Executes the complete Federated Viability Index benchmark study and returns
-    a JSON-serializable dictionary containing all metrics, base64 plots, and
-    saved report paths.
+    Executes the complete Federated Viability Index study on an already-loaded
+    `LoadedDatasetBundle` in RAM. When `save_artifacts_to_disk=False`, ZERO files
+    are written to disk on `rama`!
     """
     def _notify(pct: int, msg: str) -> None:
         if progress_cb is not None:
             progress_cb(pct, msg)
 
     t_total = time.perf_counter()
-    out_dir = Path(job_cfg.output_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out_dir = Path(job_cfg.output_dir) if save_artifacts_to_disk else None
+    if out_dir is not None:
+        out_dir.mkdir(parents=True, exist_ok=True)
 
-    _notify(5, f"Loading and preprocessing dataset: {job_cfg.dataset.data_path}...")
-    bundle = load_and_preprocess_dataset(job_cfg.dataset)
-
-    _notify(12, f"Partitioning training split across M={job_cfg.partition.num_clients} clients ({job_cfg.partition.strategy})...")
+    _notify(12, f"Partitioning {len(bundle.y_train)} training samples across M={job_cfg.partition.num_clients} clients...")
     partition = partition_dataset(
         bundle.y_train, job_cfg.partition, num_classes=bundle.num_classes
     )
@@ -167,15 +164,15 @@ def run_fvi_benchmark_pipeline(
         client_entropies=partition.client_normalized_entropy,
         class_names=bundle.class_names,
         description=partition.description,
-        save_path=out_dir / "partition_distribution.png",
+        save_path=(out_dir / "partition_distribution.png") if out_dir else None,
     )
 
-    _notify(20, f"Training Centralized Pooled Upper-Bound Model ({model_spec.arch_name})...")
+    _notify(22, f"Training Centralized Pooled Upper-Bound Model ({model_spec.arch_name})...")
     centralized_res = run_centralized_upper_bound(
         bundle, job_cfg.model, job_cfg.benchmark, job_cfg.hardware
     )
 
-    _notify(35, f"Training {partition.num_clients} Isolated Client Silos (Lower-Bound Baseline)...")
+    _notify(36, f"Training {partition.num_clients} Isolated Client Silos (Lower-Bound Baseline)...")
     isolated_res = run_isolated_local_silos(
         bundle, partition, job_cfg.model, job_cfg.benchmark, job_cfg.hardware
     )
@@ -224,7 +221,6 @@ def run_fvi_benchmark_pipeline(
             )
         )
 
-    # Compute IID reference accuracy for Heterogeneity Resilience (HR)
     if partition.strategy == "iid" or not job_cfg.benchmark.run_iid_reference_for_hr:
         iid_ref_acc = max(r.test_metrics.accuracy for r in fl_results)
     else:
@@ -248,7 +244,7 @@ def run_fvi_benchmark_pipeline(
             max(r.test_metrics.accuracy for r in fl_results),
         )
 
-    _notify(95, "Synthesizing Federated Viability Index (FVI) Scorecard & Charts...")
+    _notify(96, "Synthesizing Federated Viability Index (FVI in [0, 1]) & Charts...")
     fl_dicts = [r.to_summary_dict() for r in fl_results]
     scorecard = compute_fvi_scorecard(
         centralized_acc=centralized_res.test_metrics.accuracy,
@@ -276,20 +272,23 @@ def run_fvi_benchmark_pipeline(
         scorecard_dict=scorecard_dict,
         isolated_dict=isolated_dict,
         fl_results_list=fl_dicts,
-        save_path=out_dir / "fvi_benchmark_dashboard.png",
+        save_path=(out_dir / "fvi_benchmark_dashboard.png") if out_dir else None,
     )
 
     md_report = _generate_markdown_report(
-        job_cfg=job_cfg,
+        dataset_label=dataset_label,
+        target_label=job_cfg.dataset.target_column or "class_folder",
         partition_summary=partition_summary,
         model_spec_dict=model_spec_dict,
         scorecard_dict=scorecard_dict,
         isolated_dict=isolated_dict,
-        fl_results_dicts=fl_dicts,
     )
-    md_path = out_dir / "fvi_benchmark_report.md"
-    with open(md_path, "w", encoding="utf-8") as f:
-        f.write(md_report)
+
+    report_path_str = ""
+    if out_dir is not None:
+        md_path = out_dir / "fvi_benchmark_report.md"
+        md_path.write_text(md_report, encoding="utf-8")
+        report_path_str = str(md_path)
 
     full_payload = {
         "total_wall_time_sec": round(time.perf_counter() - t_total, 2),
@@ -303,15 +302,32 @@ def run_fvi_benchmark_pipeline(
         "partition_chart_base64": part_chart_b64,
         "dashboard_chart_base64": dashboard_b64,
         "markdown_report": md_report,
-        "report_path": str(md_path),
+        "report_path": report_path_str,
     }
 
-    with open(out_dir / "fvi_benchmark_results.json", "w", encoding="utf-8") as f:
-        json.dump(
-            {k: v for k, v in full_payload.items() if not k.endswith("_base64")},
-            f,
-            indent=2,
-        )
+    if out_dir is not None:
+        with open(out_dir / "fvi_benchmark_results.json", "w", encoding="utf-8") as f:
+            json.dump(
+                {k: v for k, v in full_payload.items() if not k.endswith("_base64")},
+                f,
+                indent=2,
+            )
 
-    _notify(100, f"Benchmark Complete! Overall FVI = {scorecard.overall_fvi_score:.1f}/100 ({scorecard.verdict_tier})")
+    _notify(100, f"Complete — FVI = {scorecard.overall_fvi_score:.3f} ({scorecard.verdict_tier})")
     return full_payload
+
+
+def run_fvi_benchmark_pipeline(
+    job_cfg: FVJobConfig,
+    progress_cb: Optional[ProgressCallback] = None,
+) -> Dict[str, Any]:
+    if progress_cb is not None:
+        progress_cb(5, f"Loading dataset: {job_cfg.dataset.data_path}...")
+    bundle = load_and_preprocess_dataset(job_cfg.dataset)
+    return run_fvi_on_loaded_bundle(
+        bundle=bundle,
+        job_cfg=job_cfg,
+        dataset_label=job_cfg.dataset.data_path,
+        progress_cb=progress_cb,
+        save_artifacts_to_disk=True,
+    )

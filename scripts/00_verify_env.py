@@ -76,7 +76,7 @@ def main() -> None:
             output_dir=str(out_dir),
         )
         res = run_fvi_benchmark_pipeline(cfg)
-        print(f"    [OK] Smoke Test Succeeded! Sample FVI Score = {res['scorecard']['overall_fvi_score']:.1f}/100")
+        print(f"    [OK] Smoke Test Succeeded! Sample FVI Score = {res['scorecard']['overall_fvi_score']:.3f} [0-1]")
     print("=" * 74)
 
 if __name__ == "__main__":

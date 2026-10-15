@@ -1,20 +1,13 @@
 """
-Unified Dataset Loader & Preprocessor for Tabular and Image Modalities.
+Unified Dataset Loader & In-Memory Tensor Preprocessor for Tabular and Image Modalities.
 
-Handles:
-  1. Tabular CSV datasets:
-     - Parses selected `feature_columns` and `target_column`
-     - Automatically encodes categorical feature columns (one-hot encoding) and
-       imputes missing numerical values using training-split medians
-     - Applies Z-score standardization (`StandardScaler`) fit strictly on the
-       training split so zero test information leaks into training
-  2. Image datasets (both `ImageFolder` directory trees and CSV manifests where
-     a feature column contains image file paths):
-     - Loads images via Pillow (`L` for 1-channel Grayscale malware byteplots or
-       `RGB` for 3-channel natural images)
-     - Resizes to `(image_size, image_size)` and normalizes pixel intensities to
-       `[-1, 1]` (`(x / 255.0 - 0.5) / 0.5`), returning clean `(N, C, H, W)`
-       float32 arrays ready for PyTorch `TensorDataset` / `DataLoader`.
+Supports:
+  1. Ephemeral In-RAM Tensor Bundles (`bundle_from_in_memory_arrays`):
+     Allows the browser to parse CSVs or resize image folders locally on the
+     user's laptop and send only a compact numerical array `(X, y)` to `rama`'s
+     RAM—so ZERO dataset files are ever written to `rama`'s hard disk!
+  2. Server-side CSV and ImageFolder loading (`load_and_preprocess_dataset`) for
+     CLI batch runs.
 """
 
 from __future__ import annotations
@@ -46,7 +39,7 @@ class LoadedDatasetBundle:
     y_test: np.ndarray          # (N_test,)
     class_names: List[str]
     feature_names: List[str]
-    input_dim: int              # D for tabular
+    input_dim: int              # D for tabular, or C*H*W for image
     image_shape: Optional[Tuple[int, int, int]] = None  # (C, H, W) for image
 
     @property
@@ -90,6 +83,89 @@ def _stratified_train_val_test_split(
     )
 
 
+def bundle_from_in_memory_arrays(
+    X_raw: np.ndarray,
+    y_raw: np.ndarray,
+    modality: str,
+    class_names: Sequence[str],
+    feature_names: Sequence[str],
+    image_shape: Optional[Tuple[int, int, int]] = None,
+    val_fraction: float = 0.10,
+    test_fraction: float = 0.20,
+    seed: int = 42,
+) -> LoadedDatasetBundle:
+    """
+    Constructs a leakage-free `LoadedDatasetBundle` purely in RAM from browser-
+    preprocessed arrays `(X_raw, y_raw)` without touching the server's disk.
+    """
+    y_all = np.asarray(y_raw, dtype=np.int64)
+    X_arr = np.asarray(X_raw, dtype=np.float32)
+
+    train_idx, val_idx, test_idx = _stratified_train_val_test_split(
+        y_all, val_fraction=val_fraction, test_fraction=test_fraction, seed=seed
+    )
+
+    if modality.lower() == "image":
+        if image_shape is None:
+            if X_arr.ndim == 4:
+                image_shape = (int(X_arr.shape[1]), int(X_arr.shape[2]), int(X_arr.shape[3]))
+            else:
+                side = int(round(np.sqrt(X_arr.shape[1])))
+                image_shape = (1, side, side)
+        X_arr = X_arr.reshape(-1, *image_shape)
+        # If pixels are in [0, 255] or [0, 1], normalize to [-1, 1]
+        if X_arr.max() > 1.5:
+            X_arr = (X_arr / 255.0 - 0.5) / 0.5
+        elif X_arr.min() >= 0.0 and X_arr.max() <= 1.0:
+            X_arr = (X_arr - 0.5) / 0.5
+
+        return LoadedDatasetBundle(
+            modality="image",
+            X_train=X_arr[train_idx],
+            y_train=y_all[train_idx],
+            X_val=X_arr[val_idx],
+            y_val=y_all[val_idx],
+            X_test=X_arr[test_idx],
+            y_test=y_all[test_idx],
+            class_names=list(class_names),
+            feature_names=list(feature_names) or [f"pixel_{image_shape}"],
+            input_dim=int(np.prod(image_shape)),
+            image_shape=image_shape,
+        )
+
+    # Tabular modality: fit median imputer & Z-score standardization strictly on X_train
+    if X_arr.ndim > 2:
+        X_arr = X_arr.reshape(X_arr.shape[0], -1)
+
+    X_train_raw = X_arr[train_idx]
+    col_medians = np.nanmedian(X_train_raw, axis=0)
+    col_medians = np.where(np.isnan(col_medians), 0.0, col_medians)
+
+    for j in range(X_arr.shape[1]):
+        mask = ~np.isfinite(X_arr[:, j])
+        if np.any(mask):
+            X_arr[mask, j] = col_medians[j]
+
+    mean = X_arr[train_idx].mean(axis=0, keepdims=True)
+    std = X_arr[train_idx].std(axis=0, keepdims=True)
+    std = np.where(std < 1e-6, 1.0, std)
+    X_scaled = ((X_arr - mean) / std).astype(np.float32)
+
+    return LoadedDatasetBundle(
+        modality="tabular",
+        X_train=X_scaled[train_idx],
+        y_train=y_all[train_idx],
+        X_val=X_scaled[val_idx],
+        y_val=y_all[val_idx],
+        X_test=X_scaled[test_idx],
+        y_test=y_all[test_idx],
+        class_names=list(class_names),
+        feature_names=list(feature_names),
+        input_dim=int(X_scaled.shape[1]),
+        image_shape=None,
+    )
+
+
 def _load_tabular_csv(cfg: DatasetConfig) -> LoadedDatasetBundle:
     path = Path(cfg.data_path)
     schema = inspect_dataset_source(path, target_column=cfg.target_column)
@@ -117,7 +193,6 @@ def _load_tabular_csv(cfg: DatasetConfig) -> LoadedDatasetBundle:
 
     col_type_map = {c.name: c.inferred_type for c in schema.columns}
 
-    # Encode target labels into sorted class names 0..C-1
     raw_targets = [r[target_idx].strip() for r in rows]
     unique_classes = sorted(set(t for t in raw_targets if t != ""))
     class_to_id = {name: idx for idx, name in enumerate(unique_classes)}
@@ -127,7 +202,6 @@ def _load_tabular_csv(cfg: DatasetConfig) -> LoadedDatasetBundle:
         [class_to_id[r[target_idx].strip()] for r in valid_rows], dtype=np.int64
     )
 
-    # Build numerical and one-hot encoded feature columns
     feature_blocks: List[np.ndarray] = []
     expanded_feature_names: List[str] = []
 
@@ -146,7 +220,6 @@ def _load_tabular_csv(cfg: DatasetConfig) -> LoadedDatasetBundle:
             feature_blocks.append(arr[:, None])
             expanded_feature_names.append(feat_name)
         else:
-            # Categorical one-hot encoding (capped at top 32 categories to avoid explosion)
             cats = sorted(set(v for v in col_vals if v != ""))[:32]
             if not cats:
                 continue
@@ -160,53 +233,29 @@ def _load_tabular_csv(cfg: DatasetConfig) -> LoadedDatasetBundle:
                 expanded_feature_names.append(f"{feat_name}={c_val}")
 
     X_raw = np.concatenate(feature_blocks, axis=1).astype(np.float32)
-
-    train_idx, val_idx, test_idx = _stratified_train_val_test_split(
-        y_all, cfg.val_fraction, cfg.test_fraction, cfg.seed
-    )
-
-    # Fit median imputer & Z-score scaler strictly on X_train
-    X_train_raw = X_raw[train_idx]
-    col_medians = np.nanmedian(X_train_raw, axis=0)
-    col_medians = np.where(np.isnan(col_medians), 0.0, col_medians)
-
-    for j in range(X_raw.shape[1]):
-        mask = np.isnan(X_raw[:, j])
-        if np.any(mask):
-            X_raw[mask, j] = col_medians[j]
-
-    mean = X_raw[train_idx].mean(axis=0, keepdims=True)
-    std = X_raw[train_idx].std(axis=0, keepdims=True)
-    std = np.where(std < 1e-6, 1.0, std)
-    X_scaled = ((X_raw - mean) / std).astype(np.float32)
-
-    return LoadedDatasetBundle(
+    return bundle_from_in_memory_arrays(
+        X_raw=X_raw,
+        y_raw=y_all,
         modality="tabular",
-        X_train=X_scaled[train_idx],
-        y_train=y_all[train_idx],
-        X_val=X_scaled[val_idx],
-        y_val=y_all[val_idx],
-        X_test=X_scaled[test_idx],
-        y_test=y_all[test_idx],
         class_names=unique_classes,
         feature_names=expanded_feature_names,
-        input_dim=int(X_scaled.shape[1]),
-        image_shape=None,
+        val_fraction=cfg.val_fraction,
+        test_fraction=cfg.test_fraction,
+        seed=cfg.seed,
     )
 
 
 def _load_single_image_tensor(
     img_path: Path, image_size: int, image_channels: int
 ) -> np.ndarray:
-    """Loads an image, converts to Grayscale (1ch) or RGB (3ch), resizes, and normalizes to [-1, 1]."""
     mode = "L" if image_channels == 1 else "RGB"
     with Image.open(img_path) as im:
         im_conv = im.convert(mode).resize((image_size, image_size), Image.Resampling.BILINEAR)
         arr = np.asarray(im_conv, dtype=np.float32) / 255.0
         if image_channels == 1:
-            arr = arr[None, :, :]  # (1, H, W)
+            arr = arr[None, :, :]
         else:
-            arr = np.transpose(arr, (2, 0, 1))  # (3, H, W)
+            arr = np.transpose(arr, (2, 0, 1))
         return ((arr - 0.5) / 0.5).astype(np.float32)
 
 
@@ -265,32 +314,21 @@ def _load_image_dataset(cfg: DatasetConfig) -> LoadedDatasetBundle:
         ],
         axis=0,
     )
-
-    train_idx, val_idx, test_idx = _stratified_train_val_test_split(
-        y_all, cfg.val_fraction, cfg.test_fraction, cfg.seed
-    )
     img_shape = (cfg.image_channels, cfg.image_size, cfg.image_size)
-
-    return LoadedDatasetBundle(
+    return bundle_from_in_memory_arrays(
+        X_raw=X_all,
+        y_raw=y_all,
         modality="image",
-        X_train=X_all[train_idx],
-        y_train=y_all[train_idx],
-        X_val=X_all[val_idx],
-        y_val=y_all[val_idx],
-        X_test=X_all[test_idx],
-        y_test=y_all[test_idx],
         class_names=unique_classes,
         feature_names=[f"pixel_grid_{cfg.image_channels}x{cfg.image_size}x{cfg.image_size}"],
-        input_dim=int(np.prod(img_shape)),
         image_shape=img_shape,
+        val_fraction=cfg.val_fraction,
+        test_fraction=cfg.test_fraction,
+        seed=cfg.seed,
     )
 
 
 def load_and_preprocess_dataset(cfg: DatasetConfig) -> LoadedDatasetBundle:
-    """
-    Master entry point that inspects `cfg.data_path` and loads either a Tabular
-    or Image `LoadedDatasetBundle`.
-    """
     schema = inspect_dataset_source(cfg.data_path, target_column=cfg.target_column)
     modality = cfg.modality.lower() if cfg.modality in ("tabular", "image") else schema.detected_modality
     if schema.source_format == "image_folder" or schema.detected_modality == "image":

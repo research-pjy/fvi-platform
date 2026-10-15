@@ -1,14 +1,14 @@
 """
 Federated Viability Index (FVI) Calculator & Scientific Verdict Synthesizer.
 
-Mathematical Formulation:
+Mathematical Formulation (Unit Index Scale in [0.000, 1.000]):
   Given:
     - A_cent:  Centralized Upper-Bound Test Accuracy (%) on 100% pooled data
     - A_local: Sample-weighted average Isolated Silo Test Accuracy (%) (Lower Bound)
     - A_FL:    Federated Learning Test Accuracy (%) under the target partition
     - A_IID:   Federated Learning Test Accuracy (%) under an IID reference split
 
-  Sub-metrics (each in [0, 1]):
+  Sub-indices (each a dimensionless ratio in [0.000, 1.000]):
     1. Centralized Parity Ratio (CPR):
          CPR = clip(A_FL / max(A_cent, 1e-6), 0.0, 1.0)
     2. Collaboration Gain (CG):
@@ -16,41 +16,46 @@ Mathematical Formulation:
     3. Heterogeneity Resilience (HR):
          HR = clip(A_FL / max(A_IID, 1e-6), 0.0, 1.0)
 
-  Composite Federated Viability Index (FVI in [0, 100]):
-         FVI = 100 * (0.45 * CPR + 0.35 * CG + 0.20 * HR)
+  Composite Federated Viability Index (FVI in [0.000, 1.000]):
+         FVI = 0.45 * CPR + 0.35 * CG + 0.20 * HR
+
+  Viability Tiers:
+    - FVI >= 0.80 : High Viability
+    - 0.60 <= FVI < 0.80 : Moderate Viability
+    - FVI < 0.60  : Low Viability
 """
 
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 
 
 @dataclass
 class AlgorithmFVIEntry:
-    """FVI breakdown for a single Federated Learning algorithm."""
+    """FVI breakdown (in [0, 1]) for a single Federated Learning algorithm."""
 
     algorithm_name: str
     test_accuracy: float
     test_macro_f1: float
     comm_mib: float
-    cpr: float
-    cg: float
-    hr: float
-    fvi_score: float
+    cpr: float        # in [0.000, 1.000]
+    cg: float         # in [0.000, 1.000]
+    hr: float         # in [0.000, 1.000]
+    fvi_score: float  # in [0.000, 1.000]
     delta_vs_centralized: float
     gain_over_isolated: float
 
 
 @dataclass
 class FVIScorecard:
-    """Complete Federated Viability Index Scorecard for the dataset and partition."""
+    """Complete Federated Viability Index Scorecard on the [0.000, 1.000] scale."""
 
-    overall_fvi_score: float
-    verdict_tier: str        # "High Viability", "Moderate Viability", or "Low Viability"
-    verdict_color: str       # "emerald", "amber", or "rose"
+    overall_fvi_score: float  # in [0.000, 1.000]
+    verdict_tier: str         # "High Viability", "Moderate Viability", or "Low Viability"
+    verdict_color: str        # "emerald", "amber", or "rose"
     best_fl_algorithm: str
     best_fl_accuracy: float
     best_fl_macro_f1: float
@@ -59,9 +64,9 @@ class FVIScorecard:
     isolated_weighted_accuracy: float
     isolated_weighted_macro_f1: float
     iid_reference_accuracy: float
-    cpr_score: float         # in [0, 100]
-    cg_score: float          # in [0, 100]
-    hr_score: float          # in [0, 100]
+    cpr_score: float          # in [0.000, 1.000]
+    cg_score: float           # in [0.000, 1.000]
+    hr_score: float           # in [0.000, 1.000]
     executive_summary: str
     recommendation: str
     per_algorithm_scores: List[AlgorithmFVIEntry]
@@ -77,15 +82,15 @@ def compute_single_fvi(
     a_iid: float,
 ) -> Tuple[float, float, float, float]:
     """
-    Returns `(cpr, cg, hr, fvi_score)` where `cpr, cg, hr` are in `[0, 1]`
-    and `fvi_score` is in `[0, 100]`.
+    Returns `(cpr, cg, hr, fvi_score)` where all four values are dimensionless
+    indices in `[0.000, 1.000]`.
     """
     cpr = float(np.clip(a_fl / max(1e-6, a_cent), 0.0, 1.0))
     gap_denom = max(2.0, a_cent - a_local)
     cg = float(np.clip((a_fl - a_local) / gap_denom, 0.0, 1.0))
     hr = float(np.clip(a_fl / max(1e-6, a_iid), 0.0, 1.0))
-    fvi = 100.0 * (0.45 * cpr + 0.35 * cg + 0.20 * hr)
-    return cpr, cg, hr, float(np.clip(fvi, 0.0, 100.0))
+    fvi = 0.45 * cpr + 0.35 * cg + 0.20 * hr
+    return cpr, cg, hr, float(np.clip(fvi, 0.0, 1.0))
 
 
 def compute_fvi_scorecard(
@@ -98,7 +103,8 @@ def compute_fvi_scorecard(
     partition_description: str,
 ) -> FVIScorecard:
     """
-    Synthesizes the `FVIScorecard` across all evaluated FL algorithms.
+    Synthesizes the `FVIScorecard` (with FVI, CPR, CG, HR in `[0.000, 1.000]`)
+    across all evaluated FL algorithms.
     """
     entries: List[AlgorithmFVIEntry] = []
 
@@ -118,10 +124,10 @@ def compute_fvi_scorecard(
                 test_accuracy=round(a_fl, 2),
                 test_macro_f1=round(f1_fl, 2),
                 comm_mib=round(comm_mib, 3),
-                cpr=round(cpr * 100.0, 1),
-                cg=round(cg * 100.0, 1),
-                hr=round(hr * 100.0, 1),
-                fvi_score=round(fvi, 1),
+                cpr=round(cpr, 3),
+                cg=round(cg, 3),
+                hr=round(hr, 3),
+                fvi_score=round(fvi, 3),
                 delta_vs_centralized=round(a_fl - centralized_acc, 2),
                 gain_over_isolated=round(a_fl - isolated_acc, 2),
             )
@@ -130,43 +136,43 @@ def compute_fvi_scorecard(
     entries.sort(key=lambda e: e.fvi_score, reverse=True)
     best = entries[0]
 
-    if best.fvi_score >= 80.0:
+    if best.fvi_score >= 0.80:
         tier = "High Viability"
         color = "emerald"
         summary = (
-            f"Federated Learning is highly viable for this dataset under {partition_description}. "
-            f"{best.algorithm_name} achieves {best.test_accuracy:.2f}% test accuracy "
-            f"(retaining {best.cpr:.1f}% of the {centralized_acc:.2f}% centralized upper bound) "
-            f"and boosts accuracy by {best.gain_over_isolated:+.2f}% over isolated client silos."
+            f"Federated learning is highly viable on this dataset under {partition_description} "
+            f"(FVI = {best.fvi_score:.3f}). {best.algorithm_name} reaches {best.test_accuracy:.2f}% test accuracy "
+            f"(CPR = {best.cpr:.3f} vs. {centralized_acc:.2f}% centralized upper bound) "
+            f"and improves upon isolated client silos by {best.gain_over_isolated:+.2f}%."
         )
         rec = (
             f"Deploy {best.algorithm_name} as your primary federated strategy. "
-            "Collaborative training provides strong accuracy gains without sharing raw data."
+            "Collaborative training captures nearly the full centralized utility without sharing raw records."
         )
-    elif best.fvi_score >= 60.0:
+    elif best.fvi_score >= 0.60:
         tier = "Moderate Viability"
         color = "amber"
         summary = (
-            f"Federated Learning shows moderate viability under {partition_description}. "
-            f"While statistical heterogeneity introduces a {abs(best.delta_vs_centralized):.2f}% gap "
-            f"relative to centralized pooling ({centralized_acc:.2f}%), {best.algorithm_name} "
+            f"Federated learning shows moderate viability under {partition_description} "
+            f"(FVI = {best.fvi_score:.3f}). Statistical heterogeneity introduces a {abs(best.delta_vs_centralized):.2f}% "
+            f"gap relative to centralized pooling ({centralized_acc:.2f}%), but {best.algorithm_name} "
             f"still outperforms isolated client training ({isolated_acc:.2f}%) by {best.gain_over_isolated:+.2f}%."
         )
         rec = (
             f"Prefer heterogeneity-resilient methods such as {best.algorithm_name} (FENS or FedProx) "
-            "over naive FedAvg to mitigate non-IID client drift."
+            "over standard FedAvg to counteract non-IID client drift."
         )
     else:
         tier = "Low Viability"
         color = "rose"
         summary = (
-            f"Federated Learning exhibits low viability under {partition_description} "
-            f"(FVI = {best.fvi_score:.1f}/100). Extreme statistical skew or limited per-client "
-            f"samples restrict {best.algorithm_name} to {best.test_accuracy:.2f}% vs. {centralized_acc:.2f}% centralized."
+            f"Federated learning exhibits low viability under {partition_description} "
+            f"(FVI = {best.fvi_score:.3f}). Severe statistical skew or low per-client sample volume "
+            f"restricts {best.algorithm_name} to {best.test_accuracy:.2f}% vs. {centralized_acc:.2f}% centralized."
         )
         rec = (
-            "Consider feature alignment, two-phase logit ensembling (FENS), or increasing local "
-            "client sample diversity before transitioning to live multi-party federation."
+            "Use two-phase logit ensembling (FENS), feature standardization, or increase local "
+            "class coverage before transitioning to live multi-party federation."
         )
 
     return FVIScorecard(

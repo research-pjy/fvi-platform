@@ -1,8 +1,8 @@
 """
 Minimalist, Publication-Grade Matplotlib Diagnostic Plots for `fvi-platform`.
 
-Returns both base64-encoded PNG data URIs (for instant rendering inside the
-Web UI without disk race conditions) and saves high-DPI PNG files to `output_dir`.
+Plots FVI, CPR, CG, and HR on the [0.00, 1.00] dimensionless index scale while
+keeping classification accuracies on the [0, 100]% scale.
 """
 
 from __future__ import annotations
@@ -40,8 +40,7 @@ def plot_partition_preview_base64(
     """
     Renders a 2-panel client partition diagnostic plot:
       - Left: Bubble matrix of client (x) vs. class (y) sample counts.
-      - Right: Per-client normalized Shannon label entropy H_i in [0, 1]
-        (1.0 = perfectly balanced across all classes, 0.0 = single-class specialist).
+      - Right: Per-client normalized Shannon label entropy H_i in [0, 1].
     """
     num_clients, num_classes = class_counts.shape
     fig, (ax_bub, ax_ent) = plt.subplots(1, 2, figsize=(11.0, 4.0))
@@ -67,9 +66,7 @@ def plot_partition_preview_base64(
     ax_bub.set_xticks(range(num_clients))
     ax_bub.set_xticklabels([f"C{i}" for i in range(num_clients)], fontsize=8.5)
     ax_bub.set_yticks(range(num_classes))
-    ax_bub.set_yticklabels(
-        [str(name)[:14] for name in class_names], fontsize=8.5
-    )
+    ax_bub.set_yticklabels([str(name)[:14] for name in class_names], fontsize=8.5)
     ax_bub.set_xlabel("Simulated Client ID", fontsize=9.5, fontweight="bold")
     ax_bub.set_ylabel("Target Class", fontsize=9.5, fontweight="bold")
     ax_bub.set_title("(a) Client-Class Sample Distribution", fontsize=10.5, fontweight="bold")
@@ -79,14 +76,14 @@ def plot_partition_preview_base64(
     bars = ax_ent.bar(
         x_c,
         client_entropies,
-        color="#2563EB",
+        color="#1D4ED8",
         alpha=0.85,
         edgecolor="#1E293B",
         linewidth=0.6,
     )
     ax_ent.axhline(
         float(np.mean(client_entropies)),
-        color="#F59E0B",
+        color="#D97706",
         linestyle="--",
         linewidth=1.5,
         label=f"Mean Entropy = {np.mean(client_entropies):.2f}",
@@ -104,8 +101,8 @@ def plot_partition_preview_base64(
     ax_ent.set_xticklabels([f"C{i}" for i in range(num_clients)], fontsize=8.5)
     ax_ent.set_ylim(0, 1.15)
     ax_ent.set_xlabel("Simulated Client ID", fontsize=9.5, fontweight="bold")
-    ax_ent.set_ylabel("Normalized Shannon Entropy [0–1]", fontsize=9.5, fontweight="bold")
-    ax_ent.set_title("(b) Client Label Diversity (1.0 = Balanced)", fontsize=10.5, fontweight="bold")
+    ax_ent.set_ylabel("Normalized Shannon Entropy [0.00–1.00]", fontsize=9.5, fontweight="bold")
+    ax_ent.set_title("(b) Client Label Diversity Index (1.00 = Balanced)", fontsize=10.5, fontweight="bold")
     ax_ent.legend(loc="lower right", fontsize=8.5)
     ax_ent.grid(axis="y", linestyle=":", alpha=0.45)
 
@@ -121,19 +118,14 @@ def plot_benchmark_dashboard_base64(
     save_path: Optional[Path] = None,
 ) -> str:
     """
-    Renders a 4-panel visual summary of the Federated Viability Index benchmark:
-      - Panel (a): Golden Triad Comparison (Centralized Upper Bound vs. Isolated
-        Silos Lower Bound vs. Federated Algorithms on Test Accuracy & Macro-F1).
-      - Panel (b): Round-by-Round Convergence Trajectory across FL strategies.
-      - Panel (c): Per-Client Isolated Accuracy vs. Best Federated Global Accuracy.
-      - Panel (d): Federated Viability Index (FVI) Component Breakdown (CPR, CG, HR, FVI)
-        across evaluated algorithms.
+    Renders a 4-panel visual summary of the Federated Viability Index benchmark,
+    with Panel (d) plotting FVI, CPR, and CG on the [0.00, 1.00] unit index scale.
     """
     fig, axes = plt.subplots(2, 2, figsize=(13.5, 9.2))
     ax_triad, ax_conv = axes[0, 0], axes[0, 1]
     ax_clients, ax_fvi = axes[1, 0], axes[1, 1]
 
-    # Panel (a): Golden Triad Accuracy & Macro-F1
+    # Panel (a): Golden Triad Accuracy & Macro-F1 (%)
     names = ["Centralized\n(Upper Bound)", "Isolated Silos\n(Lower Bound)"] + [
         r["name"].replace(" (Iterative)", "").replace(" (Two-Phase Ensembling)", "\n(Ours)")
         for r in fl_results_list
@@ -150,10 +142,10 @@ def plot_benchmark_dashboard_base64(
     x = np.arange(len(names))
     w = 0.36
     b1 = ax_triad.bar(
-        x - w / 2, accs, width=w, label="Test Accuracy (%)", color="#1E40AF", edgecolor="#0F172A"
+        x - w / 2, accs, width=w, label="Test Accuracy (%)", color="#111827", edgecolor="#0F172A"
     )
     b2 = ax_triad.bar(
-        x + w / 2, f1s, width=w, label="Macro-F1 (%)", color="#0EA5E9", edgecolor="#0F172A"
+        x + w / 2, f1s, width=w, label="Macro-F1 (%)", color="#2563EB", edgecolor="#0F172A"
     )
     for b, val in zip(b1, accs):
         ax_triad.text(
@@ -176,19 +168,19 @@ def plot_benchmark_dashboard_base64(
     # Panel (b): Convergence Curves
     ax_conv.axhline(
         scorecard_dict["centralized_accuracy"],
-        color="#10B981",
+        color="#059669",
         linestyle="--",
         linewidth=1.5,
         label="Centralized Upper Bound",
     )
     ax_conv.axhline(
         scorecard_dict["isolated_weighted_accuracy"],
-        color="#EF4444",
+        color="#BE123C",
         linestyle=":",
         linewidth=1.5,
         label="Isolated Silos Mean",
     )
-    palette = ["#2563EB", "#7C3AED", "#D97706", "#059669", "#DC2626"]
+    palette = ["#1D4ED8", "#7C3AED", "#D97706", "#059669", "#DC2626"]
     for idx, r in enumerate(fl_results_list):
         hist = r.get("round_history", [])
         if len(hist) > 1:
@@ -232,7 +224,7 @@ def plot_benchmark_dashboard_base64(
     )
     ax_clients.axhline(
         scorecard_dict["best_fl_accuracy"],
-        color="#F59E0B",
+        color="#1D4ED8",
         linewidth=2.2,
         linestyle="-",
         label=f"Best FL ({scorecard_dict['best_fl_algorithm']}: {scorecard_dict['best_fl_accuracy']:.1f}%)",
@@ -246,7 +238,7 @@ def plot_benchmark_dashboard_base64(
     ax_clients.legend(fontsize=8.5, loc="lower right")
     ax_clients.grid(axis="y", linestyle=":", alpha=0.45)
 
-    # Panel (d): FVI Scorecard Breakdown across FL Algorithms
+    # Panel (d): FVI Scorecard Breakdown in [0.00, 1.00]
     entries = scorecard_dict["per_algorithm_scores"]
     e_names = [
         e["algorithm_name"].replace(" (Iterative)", "").replace(" (Two-Phase Ensembling)", "")
@@ -258,15 +250,15 @@ def plot_benchmark_dashboard_base64(
 
     ex = np.arange(len(e_names))
     bw = 0.25
-    ax_fvi.bar(ex - bw, fvi_vals, width=bw, label="Composite FVI (0–100)", color="#0F172A")
-    ax_fvi.bar(ex, cpr_vals, width=bw, label="Centralized Parity (CPR)", color="#3B82F6")
-    ax_fvi.bar(ex + bw, cg_vals, width=bw, label="Collaboration Gain (CG)", color="#10B981")
+    ax_fvi.bar(ex - bw, fvi_vals, width=bw, label="Composite FVI [0–1]", color="#111827")
+    ax_fvi.bar(ex, cpr_vals, width=bw, label="Centralized Parity (CPR)", color="#2563EB")
+    ax_fvi.bar(ex + bw, cg_vals, width=bw, label="Collaboration Gain (CG)", color="#059669")
 
     for idx, val in enumerate(fvi_vals):
         ax_fvi.text(
             ex[idx] - bw,
-            val + 1.5,
-            f"{val:.1f}",
+            val + 0.02,
+            f"{val:.2f}",
             ha="center",
             va="bottom",
             fontsize=8,
@@ -274,14 +266,14 @@ def plot_benchmark_dashboard_base64(
         )
     ax_fvi.set_xticks(ex)
     ax_fvi.set_xticklabels(e_names, fontsize=8.5, rotation=12)
-    ax_fvi.set_ylim(0, 112)
-    ax_fvi.set_ylabel("Index Score [0–100]", fontsize=9.5, fontweight="bold")
-    ax_fvi.set_title("(d) Federated Viability Index (FVI) Breakdown", fontsize=10.5, fontweight="bold")
+    ax_fvi.set_ylim(0, 1.15)
+    ax_fvi.set_ylabel("Index Value [0.00–1.00]", fontsize=9.5, fontweight="bold")
+    ax_fvi.set_title("(d) Federated Viability Index (FVI) Breakdown [0–1]", fontsize=10.5, fontweight="bold")
     ax_fvi.legend(fontsize=8, loc="lower right")
     ax_fvi.grid(axis="y", linestyle=":", alpha=0.45)
 
     fig.suptitle(
-        f"Federated Viability Index Report — Overall FVI: {scorecard_dict['overall_fvi_score']:.1f}/100 ({scorecard_dict['verdict_tier']})",
+        f"Federated Viability Index Report — Overall FVI: {scorecard_dict['overall_fvi_score']:.3f} ({scorecard_dict['verdict_tier']})",
         fontsize=12.5,
         fontweight="bold",
         y=1.02,
