@@ -1,0 +1,14 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# Generated datasets and outputs
+data/
+outputs/
+*.pt
+*.pth
+.DS_Store

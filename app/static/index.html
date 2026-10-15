@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FedAssess — Federated Viability Index (FVI) Platform</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-subtle: #f1f5f9;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text: #0f172a;
+      --text-muted: #475569;
+      --text-light: #64748b;
+      --primary: #0f172a;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --emerald: #059669;
+      --emerald-bg: #ecfdf5;
+      --amber: #d97706;
+      --amber-bg: #fffbeb;
+      --rose: #e11d48;
+      --rose-bg: #fff1f2;
+      --radius: 10px;
+      --shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Top Navigation Bar */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .nav-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-title {
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-subtitle {
+      font-size: 12px;
+      color: var(--text-light);
+      margin-left: 8px;
+      padding-left: 8px;
+      border-left: 1px solid var(--border);
+    }
+
+    .hw-badges {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--surface-subtle);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--emerald);
+    }
+
+    /* Main Layout */
+    main {
+      max-width: 1280px;
+      margin: 24px auto 64px;
+      padding: 0 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 980px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px 24px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .step-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .step-num {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 5px;
+      background: var(--surface-subtle);
+      color: var(--text-muted);
+      border: 1px solid var(--border-strong);
+    }
+
+    /* Form Controls */
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .field label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      padding: 8px 11px;
+      border: 1px solid var(--border-strong);
+      border-radius: 7px;
+      font-size: 13px;
+      color: var(--text);
+      background: var(--surface);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--accent);
+    }
+
+    .btn-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    button {
+      cursor: pointer;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 14px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text);
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    button:hover {
+      background: var(--surface-subtle);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      background: #1e293b;
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+
+    .btn-accent:hover {
+      background: #1d4ed8;
+    }
+
+    .btn-xs {
+      padding: 4px 9px;
+      font-size: 11.5px;
+    }
+
+    /* Feature Selection Chips */
+    .feature-box {
+      border: 1px solid var(--border);
+      background: var(--surface-subtle);
+      border-radius: 8px;
+      padding: 10px 12px;
+      max-height: 135px;
+      overflow-y: auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .feat-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-size: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .feat-chip input {
+      margin: 0;
+    }
+
+    .feat-type {
+      font-size: 10px;
+      color: var(--text-light);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    /* Tables */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+      text-align: left;
+    }
+
+    th {
+      background: var(--surface-subtle);
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .num-col {
+      text-align: right;
+    }
+
+    /* Algorithm Checkboxes */
+    .algo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin: 10px 0 16px;
+    }
+
+    .algo-card {
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      background: var(--surface);
+      cursor: pointer;
+    }
+
+    .algo-card:hover {
+      background: var(--surface-subtle);
+    }
+
+    .algo-name {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .algo-desc {
+      font-size: 11.5px;
+      color: var(--text-light);
+    }
+
+    /* Progress Bar */
+    .progress-wrap {
+      margin-top: 14px;
+      display: none;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 8px;
+      background: var(--surface-subtle);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      transition: width 0.25s ease;
+    }
+
+    .progress-text {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    /* FVI Scorecard Hero */
+    .scorecard-hero {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 24px;
+      align-items: center;
+      padding: 20px;
+      border-radius: 10px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border-strong);
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 760px) {
+      .scorecard-hero {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .fvi-dial {
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      padding: 18px;
+      text-align: center;
+    }
+
+    .fvi-number {
+      font-size: 46px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .fvi-verdict {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .verdict-emerald {
+      background: var(--emerald-bg);
+      color: var(--emerald);
+      border: 1px solid #a7f3d0;
+    }
+
+    .verdict-amber {
+      background: var(--amber-bg);
+      color: var(--amber);
+      border: 1px solid #fde68a;
+    }
+
+    .verdict-rose {
+      background: var(--rose-bg);
+      color: var(--rose);
+      border: 1px solid #fecdd3;
+    }
+
+    .submetric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .submetric-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+
+    .submetric-label {
+      font-size: 11.5px;
+      color: var(--text-light);
+      font-weight: 600;
+    }
+
+    .submetric-val {
+      font-size: 20px;
+      font-weight: 700;
+      margin-top: 2px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .img-frame {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-top: 12px;
+      background: #fff;
+    }
+
+    .summary-callout {
+      background: var(--surface);
+      border-left: 4px solid var(--accent);
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <div class="brand">
+        <div class="brand-mark">FVI</div>
+        <div>
+          <span class="brand-title">FedAssess</span>
+          <span class="brand-subtitle">Federated Viability Index &amp; Benchmarking Platform</span>
+        </div>
+      </div>
+      <div class="hw-badges">
+        <span class="badge"><span class="badge-dot"></span><span id="hw-host">Inspecting host...</span></span>
+        <span class="badge" id="hw-gpu">GPU: ...</span>
+        <span class="badge" id="hw-backend">Backend: ...</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Top 2-Column Configuration Row: Step 1 (Dataset) & Step 2 (Partitioning) -->
+    <div class="grid-2">
+      <!-- STEP 1: DATASET & SCHEMA -->
+      <section class="card">
+        <div class="card-header">
+          <div class="step-title">
+            <span class="step-num">01</span>
+            <span>Dataset &amp; Feature-Target Schema</span>
+          </div>
+          <span class="badge" id="modality-badge">MODALITY: AUTO</span>
+        </div>
+
+        <div class="btn-row">
+          <button type="button" class="btn-xs" onclick="selectPreset('data/pe_malware_features.csv')">
+            PE Malware Tabular CSV
+          </button>
+          <button type="button" class="btn-xs" onclick="selectPreset('data/malware_byteplots_manifest.csv')">
+            Malware Byteplots (CSV Manifest)
+          </button>
+          <button type="button" class="btn-xs" onclick="selectPreset('data/malware_byteplots')">
+            Malware Byteplots (ImageFolder)
+          </button>
+          <label class="feat-chip" style="background: var(--accent-soft); border-color: #bfdbfe; color: var(--accent); font-weight: 600;">
+            <span>Upload Custom CSV</span>
+            <input type="file" id="csv-file-input" accept=".csv" style="display: none;" onchange="handleCsvUpload(event)" />
+          </label>
+        </div>
+
+        <div class="form-row">
+          <div class="field" style="grid-column: span 2;">
+            <label>Dataset Path (Local or on `rama`)</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="data-path" value="data/pe_malware_features.csv" style="flex: 1;" />
+              <button type="button" onclick="inspectDataset()">Inspect</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label>Target Variable (Class Label)</label>
+            <select id="target-col" onchange="onTargetColumnChanged()"></select>
+          </div>
+          <div class="field" id="image-settings-group" style="display: none;">
+            <label>Image Channels &amp; Resolution</label>
+            <div style="display: flex; gap: 6px;">
+              <select id="image-channels" style="flex: 1;">
+                <option value="1">1-Ch Grayscale (Malware Byteplot)</option>
+                <option value="3">3-Ch RGB Color</option>
+              </select>
+              <select id="image-size" style="width: 88px;">
+                <option value="32">32x32</option>
+                <option value="64">64x64</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="field" style="margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label>Selected Input Features (<span id="feat-count-label">0</span> selected)</label>
+            <div style="display: flex; gap: 6px;">
+              <button type="button" class="btn-xs" onclick="toggleAllFeatures(true)">Select All</button>
+              <button type="button" class="btn-xs" onclick="toggleAllFeatures(false)">Clear</button>
+            </div>
+          </div>
+          <div class="feature-box" id="feature-chips-container"></div>
+        </div>
+
+        <div class="field">
+          <label>Dataset Preview &amp; Class Balance (<span id="row-count-label">0</span> rows)</label>
+          <div class="table-wrap" id="preview-table-container" style="max-height: 155px;"></div>
+        </div>
+      </section>
+
+      <!-- STEP 2: CLIENT PARTITION STUDIO -->
+      <section class="card">
+        <div class="card-header">
+          <div class="step-title">
+            <span class="step-num">02</span>
+            <span>Simulated Client Partitioning &amp; Skew Studio</span>
+          </div>
+          <button type="button" class="btn-xs" onclick="previewPartition()">Refresh Split Preview</button>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label>Simulated Clients (M)</label>
+            <input type="number" id="num-clients" value="10" min="2" max="100" onchange="previewPartition()" />
+          </div>
+          <div class="field">
+            <label>Partitioning Strategy</label>
+            <select id="partition-strategy" onchange="onStrategyChanged()">
+              <option value="dirichlet" selected>Non-IID Dirichlet Dir(α)</option>
+              <option value="iid">IID Uniform Split</option>
+              <option value="quantity_skew">Quantity / Volume Skew</option>
+              <option value="generalist_specialist">Generalist (C0) vs. Specialists</option>
+            </select>
+          </div>
+          <div class="field" id="alpha-field">
+            <label>Dirichlet Heterogeneity (α)</label>
+            <select id="dirichlet-alpha" onchange="previewPartition()">
+              <option value="0.01">0.01 (Extreme Non-IID)</option>
+              <option value="0.05">0.05 (High Non-IID)</option>
+              <option value="0.1" selected>0.10 (Moderate Non-IID)</option>
+              <option value="0.5">0.50 (Mild Non-IID)</option>
+              <option value="5.0">5.00 (Near-IID)</option>
+            </select>
+          </div>
+          <div class="field" id="specialist-field" style="display: none;">
+            <label>Specialist Class IDs</label>
+            <input type="text" id="specialist-classes" value="0, 1" onchange="previewPartition()" />
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px;">
+          <span class="badge" id="part-entropy-badge">Mean Client Entropy: --</span>
+          <span class="badge" id="part-model-badge">Mode 1 Model: --</span>
+        </div>
+
+        <img id="partition-preview-img" class="img-frame" alt="Client Partition Preview" style="display: none;" />
+      </section>
+    </div>
+
+    <!-- STEP 3: MODE 1 UNIFIED MODEL & FL BENCHMARK EXECUTION -->
+    <section class="card">
+      <div class="card-header">
+        <div class="step-title">
+          <span class="step-num">03</span>
+          <span>Mode 1 Unified Client Model &amp; Federated Algorithms</span>
+        </div>
+        <span class="badge">GOLDEN TRIAD: CENTRALIZED + ISOLATED SILOS + FEDERATED</span>
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label>Unified Client Model Backbone (Mode 1)</label>
+          <select id="model-arch" onchange="previewPartition()">
+            <option value="auto" selected>Auto-Select (Tabular MLP / Vision ResNet-8)</option>
+            <option value="tabular_mlp">Tabular MLP (BatchNorm + ReLU)</option>
+            <option value="resnet8_light">Vision ResNet-8 (Lightweight)</option>
+            <option value="simple_cnn">Vision SimpleCNN (2-Block)</option>
+            <option value="resnet8">Vision ResNet-8 (Full 18.85 MiB)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>MLP Hidden Layer Widths</label>
+          <input type="text" id="hidden-dims" value="128, 64" />
+        </div>
+        <div class="field">
+          <label>Iterative FL Global Rounds</label>
+          <input type="number" id="fl-rounds" value="20" min="2" max="200" />
+        </div>
+        <div class="field">
+          <label>Client Local Epochs / Steps</label>
+          <input type="number" id="local-epochs" value="2" min="1" max="50" />
+        </div>
+        <div class="field">
+          <label>FENS Phase-1 Local Epochs</label>
+          <input type="number" id="fens-p1-epochs" value="20" min="2" max="500" />
+        </div>
+      </div>
+
+      <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">
+        Federated Learning Algorithms to Benchmark (Centralized &amp; Isolated Silos run automatically):
+      </label>
+      <div class="algo-grid">
+        <label class="algo-card">
+          <input type="checkbox" class="algo-cb" value="fedavg" checked />
+          <div>
+            <div class="algo-name">FedAvg</div>
+            <div class="algo-desc">Standard coordinate weight averaging (McMahan et al.)</div>
+          </div>
+        </label>
+        <label class="algo-card">
+          <input type="checkbox" class="algo-cb" value="fedprox" checked />
+          <div>
+            <div class="algo-name">FedProx</div>
+            <div class="algo-desc">Proximal regularization against non-IID client drift</div>
+          </div>
+        </label>
+        <label class="algo-card">
+          <input type="checkbox" class="algo-cb" value="fedadam" checked />
+          <div>
+            <div class="algo-name">FedAdam</div>
+            <div class="algo-desc">Adaptive server momentum optimization (Reddi et al.)</div>
+          </div>
+        </label>
+        <label class="algo-card">
+          <input type="checkbox" class="algo-cb" value="fens" checked />
+          <div>
+            <div class="algo-name">FENS + FedEns (NeurIPS 2024)</div>
+            <div class="algo-desc">One-shot INT8 ensemble + Phase-2 FedAdam aggregator</div>
+          </div>
+        </label>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <button type="button" class="btn-accent" id="run-btn" onclick="startBenchmark()">
+          Run Federated Viability Index Benchmark
+        </button>
+        <span style="font-size: 12px; color: var(--text-light);">
+          Computes Centralized Upper Bound, Isolated Client Silos, FL Strategies, and the 0–100 FVI Scorecard.
+        </span>
+      </div>
+
+      <div class="progress-wrap" id="progress-wrap">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progress-fill"></div>
+        </div>
+        <div class="progress-text" id="progress-text">Starting...</div>
+      </div>
+    </section>
+
+    <!-- STEP 4: FVI SCORECARD & BENCHMARK RESULTS -->
+    <section class="card" id="results-section" style="display: none;">
+      <div class="card-header">
+        <div class="step-title">
+          <span class="step-num">04</span>
+          <span>Federated Viability Index (FVI) Scorecard &amp; Benchmark Report</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn-xs" onclick="downloadMarkdownReport()">Download Markdown Report (.md)</button>
+          <button type="button" class="btn-xs" onclick="downloadJsonResults()">Download JSON Metrics (.json)</button>
+        </div>
+      </div>
+
+      <div class="scorecard-hero">
+        <div class="fvi-dial">
+          <div style="font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+            Federated Viability Index
+          </div>
+          <div class="fvi-number" id="fvi-score-val">--</div>
+          <div style="font-size: 11px; color: var(--text-light); margin-top: 2px;">out of 100</div>
+          <div class="fvi-verdict" id="fvi-verdict-badge">--</div>
+        </div>
+
+        <div>
+          <div class="submetric-grid">
+            <div class="submetric-card">
+              <div class="submetric-label">Centralized Parity (CPR)</div>
+              <div class="submetric-val" id="cpr-val">--%</div>
+              <div style="font-size: 11px; color: var(--text-light);">vs. Pooled Upper Bound (<span id="cent-acc-inline">--</span>)</div>
+            </div>
+            <div class="submetric-card">
+              <div class="submetric-label">Collaboration Gain (CG)</div>
+              <div class="submetric-val" id="cg-val">--%</div>
+              <div style="font-size: 11px; color: var(--text-light);">vs. Isolated Silos (<span id="iso-acc-inline">--</span>)</div>
+            </div>
+            <div class="submetric-card">
+              <div class="submetric-label">Heterogeneity Resilience (HR)</div>
+              <div class="submetric-val" id="hr-val">--%</div>
+              <div style="font-size: 11px; color: var(--text-light);">Non-IID vs. IID Stability</div>
+            </div>
+          </div>
+
+          <div class="summary-callout">
+            <div style="font-weight: 600; margin-bottom: 4px;" id="exec-summary-text"></div>
+            <div style="color: var(--text-muted); font-size: 12.5px;" id="exec-rec-text"></div>
+          </div>
+        </div>
+      </div>
+
+      <h4 style="font-size: 13.5px; font-weight: 600; margin-bottom: 10px;">
+        Golden Triad &amp; Federated Strategy Benchmark Table
+      </h4>
+      <div class="table-wrap" id="results-table-wrap" style="margin-bottom: 20px;"></div>
+
+      <h4 style="font-size: 13.5px; font-weight: 600; margin-bottom: 6px;">
+        Diagnostic Visual Suite
+      </h4>
+      <img id="dashboard-chart-img" class="img-frame" alt="FVI Benchmark Dashboard" />
+    </section>
+  </main>
+
+  <script>
+    let currentSchema = null;
+    let latestResult = null;
+    let pollTimer = null;
+
+    async function loadSystemStatus() {
+      const res = await fetch('/api/system-status');
+      const data = await res.json();
+      document.getElementById('hw-host').textContent = `Host: ${data.hostname} (${data.conda_env})`;
+      document.getElementById('hw-gpu').textContent = `${data.gpu_name}${data.vram_gib ? ' (' + data.vram_gib + ' GiB)' : ''}`;
+      document.getElementById('hw-backend').textContent = `${data.backend}${data.bf16_supported ? ' + BF16' : ''}`;
+    }
+
+    function selectPreset(path) {
+      document.getElementById('data-path').value = path;
+      inspectDataset();
+    }
+
+    async function handleCsvUpload(ev) {
+      const file = ev.target.files[0];
+      if (!file) return;
+      const content = await file.text();
+      const res = await fetch('/api/upload-csv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, content })
+      });
+      const schema = await res.json();
+      if (schema.error) {
+        alert(schema.error);
+        return;
+      }
+      document.getElementById('data-path').value = schema.data_path;
+      renderSchema(schema);
+      previewPartition();
+    }
+
+    async function inspectDataset(targetOverride = null) {
+      const dataPath = document.getElementById('data-path').value.trim();
+      const res = await fetch('/api/inspect-dataset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data_path: dataPath, target_column: targetOverride })
+      });
+      const schema = await res.json();
+      if (!schema.exists) {
+        alert(schema.error_message || 'Dataset path not found.');
+        return;
+      }
+      renderSchema(schema);
+      previewPartition();
+    }
+
+    function renderSchema(schema) {
+      currentSchema = schema;
+      document.getElementById('modality-badge').textContent = `MODALITY: ${schema.detected_modality.toUpperCase()} (${schema.source_format.toUpperCase()})`;
+      document.getElementById('row-count-label').textContent = schema.num_rows;
+
+      const imgGroup = document.getElementById('image-settings-group');
+      imgGroup.style.display = schema.detected_modality === 'image' ? 'flex' : 'none';
+
+      // Populate Target Dropdown
+      const targetSel = document.getElementById('target-col');
+      targetSel.innerHTML = '';
+      schema.columns.forEach(col => {
+        const opt = document.createElement('option');
+        opt.value = col.name;
+        opt.textContent = `${col.name} (${col.unique_count} unique)`;
+        if (col.name === schema.suggested_target) opt.selected = true;
+        targetSel.appendChild(opt);
+      });
+
+      renderFeatureChips(schema, targetSel.value);
+      renderPreviewTable(schema);
+    }
+
+    function onTargetColumnChanged() {
+      const newTarget = document.getElementById('target-col').value;
+      inspectDataset(newTarget);
+    }
+
+    function renderFeatureChips(schema, selectedTarget) {
+      const box = document.getElementById('feature-chips-container');
+      box.innerHTML = '';
+      const suggestedSet = new Set(schema.suggested_features);
+
+      schema.columns.forEach(col => {
+        if (col.name === selectedTarget) return;
+        const lbl = document.createElement('label');
+        lbl.className = 'feat-chip';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'feat-cb';
+        cb.value = col.name;
+        cb.checked = suggestedSet.has(col.name);
+        cb.onchange = updateFeatureCountLabel;
+
+        const spanName = document.createElement('span');
+        spanName.textContent = col.name;
+        const spanType = document.createElement('span');
+        spanType.className = 'feat-type';
+        spanType.textContent = col.inferred_type === 'numerical' ? '#num' : (col.inferred_type === 'image_path' ? 'img' : 'cat');
+
+        lbl.appendChild(cb);
+        lbl.appendChild(spanName);
+        lbl.appendChild(spanType);
+        box.appendChild(lbl);
+      });
+      updateFeatureCountLabel();
+    }
+
+    function updateFeatureCountLabel() {
+      const cbs = document.querySelectorAll('.feat-cb:checked');
+      document.getElementById('feat-count-label').textContent = cbs.length;
+    }
+
+    function toggleAllFeatures(state) {
+      document.querySelectorAll('.feat-cb').forEach(cb => { cb.checked = state; });
+      updateFeatureCountLabel();
+    }
+
+    function renderPreviewTable(schema) {
+      const wrap = document.getElementById('preview-table-container');
+      if (!schema.preview_rows || schema.preview_rows.length === 0) {
+        wrap.innerHTML = '<div style="padding: 10px; color: var(--text-light);">No preview rows.</div>';
+        return;
+      }
+      const cols = schema.columns.slice(0, 6).map(c => c.name);
+      if (!cols.includes(schema.suggested_target) && schema.suggested_target) {
+        cols.push(schema.suggested_target);
+      }
+
+      let html = '<table><thead><tr>';
+      cols.forEach(c => { html += `<th>${c}</th>`; });
+      html += '</tr></thead><tbody>';
+      schema.preview_rows.slice(0, 4).forEach(r => {
+        html += '<tr>';
+        cols.forEach(c => { html += `<td>${r[c] !== undefined ? r[c] : ''}</td>`; });
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      wrap.innerHTML = html;
+    }
+
+    function onStrategyChanged() {
+      const strat = document.getElementById('partition-strategy').value;
+      document.getElementById('alpha-field').style.display = (strat === 'dirichlet' || strat === 'quantity_skew') ? 'flex' : 'none';
+      document.getElementById('specialist-field').style.display = (strat === 'generalist_specialist') ? 'flex' : 'none';
+      previewPartition();
+    }
+
+    function buildJobPayload() {
+      const checkedFeats = Array.from(document.querySelectorAll('.feat-cb:checked')).map(cb => cb.value);
+      const checkedAlgos = Array.from(document.querySelectorAll('.algo-cb:checked')).map(cb => cb.value);
+      const modality = currentSchema ? currentSchema.detected_modality : 'auto';
+
+      return {
+        dataset: {
+          data_path: document.getElementById('data-path').value.trim(),
+          modality: modality,
+          target_column: document.getElementById('target-col').value,
+          feature_columns: checkedFeats.length > 0 ? checkedFeats : ['all'],
+          image_channels: parseInt(document.getElementById('image-channels').value || '1', 10),
+          image_size: parseInt(document.getElementById('image-size').value || '32', 10),
+        },
+        partition: {
+          num_clients: parseInt(document.getElementById('num-clients').value || '10', 10),
+          strategy: document.getElementById('partition-strategy').value,
+          dirichlet_alpha: parseFloat(document.getElementById('dirichlet-alpha').value || '0.1'),
+          specialist_classes: document.getElementById('specialist-classes').value,
+        },
+        model: {
+          arch: document.getElementById('model-arch').value,
+          hidden_dims: document.getElementById('hidden-dims').value,
+        },
+        benchmark: {
+          algorithms: checkedAlgos.length > 0 ? checkedAlgos : ['fedavg', 'fens'],
+          fl_global_rounds: parseInt(document.getElementById('fl-rounds').value || '20', 10),
+          fl_local_epochs: parseInt(document.getElementById('local-epochs').value || '2', 10),
+          centralized_epochs: parseInt(document.getElementById('fens-p1-epochs').value || '20', 10),
+          isolated_epochs: parseInt(document.getElementById('fens-p1-epochs').value || '20', 10),
+          fens_phase1_epochs: parseInt(document.getElementById('fens-p1-epochs').value || '20', 10),
+        }
+      };
+    }
+
+    async function previewPartition() {
+      const payload = buildJobPayload();
+      const res = await fetch('/api/preview-partition', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.error) return;
+
+      document.getElementById('part-entropy-badge').textContent = `Mean Client Entropy: ${data.partition.mean_normalized_entropy.toFixed(3)} / 1.000`;
+      document.getElementById('part-model-badge').textContent = `Model: ${data.model_spec.arch_name} (${data.model_spec.num_parameters.toLocaleString()} params, ${data.model_spec.fp32_size_mib} MiB)`;
+
+      const img = document.getElementById('partition-preview-img');
+      img.src = data.partition_chart_base64;
+      img.style.display = 'block';
+    }
+
+    async function startBenchmark() {
+      const payload = buildJobPayload();
+      document.getElementById('run-btn').disabled = true;
+      const pWrap = document.getElementById('progress-wrap');
+      pWrap.style.display = 'block';
+      document.getElementById('progress-fill').style.width = '4%';
+      document.getElementById('progress-text').textContent = 'Submitting benchmark job...';
+
+      const res = await fetch('/api/run-benchmark', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.error) {
+        alert(data.error);
+        document.getElementById('run-btn').disabled = false;
+        return;
+      }
+
+      pollTimer = setInterval(pollJobStatus, 600);
+    }
+
+    async function pollJobStatus() {
+      const res = await fetch('/api/job-status');
+      const state = await res.json();
+      document.getElementById('progress-fill').style.width = `${state.progress}%`;
+      document.getElementById('progress-text').textContent = `[${state.progress}%] ${state.message}`;
+
+      if (!state.running) {
+        clearInterval(pollTimer);
+        document.getElementById('run-btn').disabled = false;
+        if (state.error) {
+          alert(state.error);
+        } else if (state.result) {
+          renderBenchmarkResults(state.result);
+        }
+      }
+    }
+
+    function renderBenchmarkResults(result) {
+      latestResult = result;
+      const sc = result.scorecard;
+      const sec = document.getElementById('results-section');
+      sec.style.display = 'block';
+
+      document.getElementById('fvi-score-val').textContent = sc.overall_fvi_score.toFixed(1);
+      const badge = document.getElementById('fvi-verdict-badge');
+      badge.textContent = sc.verdict_tier;
+      badge.className = `fvi-verdict verdict-${sc.verdict_color}`;
+
+      document.getElementById('cpr-val').textContent = `${sc.cpr_score.toFixed(1)}%`;
+      document.getElementById('cg-val').textContent = `${sc.cg_score.toFixed(1)}%`;
+      document.getElementById('hr-val').textContent = `${sc.hr_score.toFixed(1)}%`;
+      document.getElementById('cent-acc-inline').textContent = `${sc.centralized_accuracy.toFixed(2)}%`;
+      document.getElementById('iso-acc-inline').textContent = `${sc.isolated_weighted_accuracy.toFixed(2)}%`;
+
+      document.getElementById('exec-summary-text').textContent = sc.executive_summary;
+      document.getElementById('exec-rec-text').textContent = `Recommendation: ${sc.recommendation}`;
+
+      // Build Golden Triad Comparison Table
+      let html = `<table>
+        <thead>
+          <tr>
+            <th>Benchmark / Strategy</th>
+            <th class="num-col">Test Accuracy</th>
+            <th class="num-col">Macro-F1</th>
+            <th class="num-col">Delta vs. Centralized</th>
+            <th class="num-col">Gain vs. Isolated Silos</th>
+            <th class="num-col">Comm. Volume (MiB)</th>
+            <th class="num-col">FVI Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="background: #f8fafc;">
+            <td><strong>Centralized (Pooled Upper Bound)</strong></td>
+            <td class="num-col"><strong>${sc.centralized_accuracy.toFixed(2)}%</strong></td>
+            <td class="num-col">${sc.centralized_macro_f1.toFixed(2)}%</td>
+            <td class="num-col">0.00%</td>
+            <td class="num-col">+${(sc.centralized_accuracy - sc.isolated_weighted_accuracy).toFixed(2)}%</td>
+            <td class="num-col">0.000</td>
+            <td class="num-col">—</td>
+          </tr>
+          <tr style="background: #f8fafc;">
+            <td><strong>Isolated Client Silos (Lower Bound)</strong></td>
+            <td class="num-col"><strong>${sc.isolated_weighted_accuracy.toFixed(2)}%</strong></td>
+            <td class="num-col">${sc.isolated_weighted_macro_f1.toFixed(2)}%</td>
+            <td class="num-col">${(sc.isolated_weighted_accuracy - sc.centralized_accuracy).toFixed(2)}%</td>
+            <td class="num-col">0.00%</td>
+            <td class="num-col">0.000</td>
+            <td class="num-col">—</td>
+          </tr>`;
+
+      sc.per_algorithm_scores.forEach((entry, idx) => {
+        const highlight = idx === 0 ? 'style="background: #eff6ff;"' : '';
+        const signDelta = entry.delta_vs_centralized >= 0 ? '+' : '';
+        const signGain = entry.gain_over_isolated >= 0 ? '+' : '';
+        html += `<tr ${highlight}>
+          <td><strong>${entry.algorithm_name}</strong> ${idx === 0 ? '<span class="badge" style="margin-left:6px;">BEST</span>' : ''}</td>
+          <td class="num-col"><strong>${entry.test_accuracy.toFixed(2)}%</strong></td>
+          <td class="num-col">${entry.test_macro_f1.toFixed(2)}%</td>
+          <td class="num-col">${signDelta}${entry.delta_vs_centralized.toFixed(2)}%</td>
+          <td class="num-col">${signGain}${entry.gain_over_isolated.toFixed(2)}%</td>
+          <td class="num-col">${entry.comm_mib.toFixed(3)}</td>
+          <td class="num-col"><strong>${entry.fvi_score.toFixed(1)}</strong></td>
+        </tr>`;
+      });
+
+      html += '</tbody></table>';
+      document.getElementById('results-table-wrap').innerHTML = html;
+
+      document.getElementById('dashboard-chart-img').src = result.dashboard_chart_base64;
+      sec.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function downloadMarkdownReport() {
+      if (!latestResult) return;
+      const blob = new Blob([latestResult.markdown_report], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'fvi_benchmark_report.md';
+      a.click();
+    }
+
+    function downloadJsonResults() {
+      if (!latestResult) return;
+      const clean = Object.assign({}, latestResult);
+      delete clean.partition_chart_base64;
+      delete clean.dashboard_chart_base64;
+      const blob = new Blob([JSON.stringify(clean, null, 2)], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'fvi_benchmark_results.json';
+      a.click();
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadSystemStatus();
+      await inspectDataset();
+    });
+  </script>
+</body>
+</html>
