@@ -3,28 +3,89 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FedAssess — Federated Viability Index (FVI) Platform</title>
+  <title>FedAssess — Federated Viability Index</title>
+  <!-- Editorial Display Serif (Instrument Serif) + Clean Body Sans (DM Sans & JetBrains Mono) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
   <style>
     :root {
-      --bg: #f8fafc;
-      --surface: #ffffff;
-      --surface-subtle: #f1f5f9;
-      --border: #e2e8f0;
-      --border-strong: #cbd5e1;
-      --text: #0f172a;
-      --text-muted: #475569;
-      --text-light: #64748b;
-      --primary: #0f172a;
-      --accent: #2563eb;
-      --accent-soft: #eff6ff;
-      --emerald: #059669;
-      --emerald-bg: #ecfdf5;
-      --amber: #d97706;
-      --amber-bg: #fffbeb;
-      --rose: #e11d48;
-      --rose-bg: #fff1f2;
-      --radius: 10px;
-      --shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
+      /* Light Mode (Default Editorial Palette) */
+      --bg: #FAFAF8;
+      --surface: #FFFFFF;
+      --surface-subtle: #F3F3EF;
+      --surface-glass: rgba(250, 250, 248, 0.82);
+      --text: #111111;
+      --text-secondary: #6B6B6B;
+      --text-tertiary: #8E8E8A;
+      --border: rgba(17, 17, 17, 0.09);
+      --border-strong: rgba(17, 17, 17, 0.16);
+      --accent: #1D4ED8;
+      --accent-hover: #1E40AF;
+      --accent-subtle: rgba(29, 78, 216, 0.07);
+      --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 32px rgba(0, 0, 0, 0.06);
+      --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.06), 0 20px 40px rgba(0, 0, 0, 0.09);
+      --status-high: #059669;
+      --status-high-bg: rgba(5, 150, 105, 0.09);
+      --status-mod: #B45309;
+      --status-mod-bg: rgba(180, 83, 9, 0.09);
+      --status-low: #BE123C;
+      --status-low-bg: rgba(190, 18, 60, 0.09);
+      --radius-card: 16px;
+      --radius-inner: 12px;
+      --radius-pill: 999px;
+      --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
+      --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #0B0B0F;
+        --surface: #121218;
+        --surface-subtle: #191922;
+        --surface-glass: rgba(11, 11, 15, 0.82);
+        --text: #F4F4F0;
+        --text-secondary: #9A9AA2;
+        --text-tertiary: #6E6E77;
+        --border: rgba(255, 255, 255, 0.09);
+        --border-strong: rgba(255, 255, 255, 0.18);
+        --accent: #3B82F6;
+        --accent-hover: #60A5FA;
+        --accent-subtle: rgba(59, 130, 246, 0.12);
+        --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 16px 40px rgba(0, 0, 0, 0.45);
+        --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.45), 0 24px 48px rgba(0, 0, 0, 0.6);
+        --status-high: #34D399;
+        --status-high-bg: rgba(52, 211, 153, 0.12);
+        --status-mod: #FBBF24;
+        --status-mod-bg: rgba(251, 191, 36, 0.12);
+        --status-low: #FB7185;
+        --status-low-bg: rgba(251, 113, 133, 0.12);
+      }
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #0B0B0F;
+      --surface: #121218;
+      --surface-subtle: #191922;
+      --surface-glass: rgba(11, 11, 15, 0.82);
+      --text: #F4F4F0;
+      --text-secondary: #9A9AA2;
+      --text-tertiary: #6E6E77;
+      --border: rgba(255, 255, 255, 0.09);
+      --border-strong: rgba(255, 255, 255, 0.18);
+      --accent: #3B82F6;
+      --accent-hover: #60A5FA;
+      --accent-subtle: rgba(59, 130, 246, 0.12);
+      --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 16px 40px rgba(0, 0, 0, 0.45);
+      --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.45), 0 24px 48px rgba(0, 0, 0, 0.6);
+      --status-high: #34D399;
+      --status-high-bg: rgba(52, 211, 153, 0.12);
+      --status-mod: #FBBF24;
+      --status-mod-bg: rgba(251, 191, 36, 0.12);
+      --status-low: #FB7185;
+      --status-low-bg: rgba(251, 113, 133, 0.12);
     }
 
     * {
@@ -33,999 +94,1264 @@
       padding: 0;
     }
 
+    html {
+      scroll-behavior: smooth;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+      font-family: var(--font-sans);
       background-color: var(--bg);
       color: var(--text);
-      line-height: 1.5;
-      font-size: 14px;
+      font-size: 16px;
+      line-height: 1.65;
       -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      transition: background-color 200ms ease, color 200ms ease;
     }
 
-    /* Top Navigation Bar */
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
+    /* Sticky Glassmorphism Navigation */
+    header.site-nav {
       position: sticky;
       top: 0;
-      z-index: 50;
+      z-index: 100;
+      background: var(--surface-glass);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
     }
 
-    .nav-container {
-      max-width: 1280px;
+    .nav-inner {
+      max-width: 1120px;
       margin: 0 auto;
-      padding: 14px 24px;
+      height: 72px;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .brand-serif {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-tag {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-secondary);
+      padding-left: 12px;
+      border-left: 1px solid var(--border);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hw-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--status-high);
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 180ms ease, border-color 180ms ease;
+    }
+
+    .icon-btn:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-1px);
+    }
+
+    /* Main Container & Editorial Rhythm */
+    main.container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 80px 24px 128px;
+    }
+
+    @media (max-width: 768px) {
+      main.container {
+        padding: 48px 20px 80px;
+      }
+      .brand-tag {
+        display: none;
+      }
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    /* Hero Section */
+    .hero {
+      max-width: 820px;
+      margin-bottom: 48px;
+    }
+
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.75rem, 6vw, 4.75rem);
+      font-weight: 400;
+      line-height: 1.05;
+      letter-spacing: -0.025em;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+
+    .hero p {
+      font-size: 18px;
+      line-height: 1.65;
+      color: var(--text-secondary);
+      max-width: 62ch;
+    }
+
+    /* Smooth Reveal Animation */
+    .reveal-section {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .reveal-section.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .reveal-section {
+        opacity: 1;
+        transform: none;
+        transition: none;
+      }
+    }
+
+    /* Cards */
+    .editorial-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      padding: 32px;
+      margin-bottom: 32px;
+      transition: box-shadow 220ms ease, border-color 220ms ease;
+    }
+
+    /* State 1: Drag-and-Drop Zone */
+    .dropzone {
+      border: 1.5px dashed var(--border-strong);
+      border-radius: var(--radius-card);
+      background: var(--surface);
+      padding: 64px 32px;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: var(--shadow-card);
+      transition: all 200ms ease;
+      position: relative;
+    }
+
+    .dropzone:hover,
+    .dropzone.drag-active {
+      border-color: var(--accent);
+      background: var(--accent-subtle);
+      box-shadow: var(--shadow-hover);
+      transform: translateY(-2px);
+    }
+
+    .dropzone-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      color: var(--text);
+    }
+
+    .dropzone h2 {
+      font-family: var(--font-display);
+      font-size: 30px;
+      font-weight: 400;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .dropzone p {
+      font-size: 15px;
+      color: var(--text-secondary);
+      max-width: 48ch;
+      margin: 0 auto 24px;
+    }
+
+    /* Buttons (48px tall, pill radius) */
+    .btn {
+      height: 48px;
+      padding: 0 24px;
+      border-radius: var(--radius-pill);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text);
+      text-decoration: none;
+      transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: var(--text);
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #FFFFFF;
+    }
+
+    .btn-sm {
+      height: 36px;
+      padding: 0 16px;
+      font-size: 13px;
+    }
+
+    /* Upload Progress Bar */
+    .upload-status {
+      max-width: 420px;
+      margin: 20px auto 0;
+      display: none;
+    }
+
+    .bar-track {
+      width: 100%;
+      height: 6px;
+      background: var(--surface-subtle);
+      border-radius: var(--radius-pill);
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      transition: width 200ms ease;
+    }
+
+    /* Loaded File Banner */
+    .dataset-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding: 20px 24px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-inner);
+      margin-bottom: 32px;
+    }
+
+    .dataset-meta {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .dataset-name {
+      font-weight: 600;
+      font-size: 16px;
+      color: var(--text);
+    }
+
+    .dataset-sub {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+    }
+
+    /* State 2: Simple 3-Question Form */
+    .config-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    @media (max-width: 768px) {
+      .config-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .control-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .control-hint {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    select.clean-select,
+    input.clean-input {
+      height: 48px;
+      padding: 0 16px;
+      border-radius: var(--radius-inner);
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      outline: none;
+      transition: border-color 180ms ease;
+    }
+
+    select.clean-select:focus,
+    input.clean-input:focus {
+      border-color: var(--accent);
+    }
+
+    /* 3-Option Distribution Cards */
+    .skew-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    @media (max-width: 820px) {
+      .skew-cards {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .skew-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-inner);
+      padding: 20px;
+      cursor: pointer;
+      background: var(--surface);
+      transition: all 180ms ease;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .skew-card:hover {
+      border-color: var(--border-strong);
+    }
+
+    .skew-card.active {
+      border-color: var(--accent);
+      background: var(--accent-subtle);
+    }
+
+    .skew-title {
+      font-weight: 600;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .skew-desc {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Collapsible Advanced Drawer */
+    details.advanced-drawer {
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+      margin-bottom: 32px;
+    }
+
+    details.advanced-drawer summary {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      list-style: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      user-select: none;
+    }
+
+    details.advanced-drawer summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details.advanced-drawer summary:hover {
+      color: var(--text);
+    }
+
+    .drawer-body {
+      margin-top: 24px;
+      padding: 24px;
+      border-radius: var(--radius-inner);
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+    }
+
+    .feature-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-height: 160px;
+      overflow-y: auto;
+      margin-top: 12px;
+    }
+
+    .feat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: var(--radius-pill);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-size: 13px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    /* State 3: Editorial Scorecard Layout */
+    .scorecard-grid {
+      display: grid;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: 32px;
+      align-items: stretch;
+      margin-bottom: 32px;
+    }
+
+    @media (max-width: 860px) {
+      .scorecard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .fvi-hero-box {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 36px;
+      border-radius: var(--radius-card);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-card);
+    }
+
+    .fvi-big-score {
+      font-family: var(--font-display);
+      font-size: clamp(4.5rem, 9vw, 6.5rem);
+      line-height: 0.95;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      margin: 16px 0;
+    }
+
+    .verdict-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      width: fit-content;
+    }
+
+    .verdict-emerald {
+      background: var(--status-high-bg);
+      color: var(--status-high);
+    }
+
+    .verdict-amber {
+      background: var(--status-mod-bg);
+      color: var(--status-mod);
+    }
+
+    .verdict-rose {
+      background: var(--status-low-bg);
+      color: var(--status-low);
+    }
+
+    .submetrics-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      justify-content: space-between;
+    }
+
+    .submetric-row {
+      padding: 22px 24px;
+      border-radius: var(--radius-inner);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-card);
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
     }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .brand-mark {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      background: var(--primary);
-      color: #fff;
-      font-weight: 700;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      letter-spacing: -0.5px;
-    }
-
-    .brand-title {
-      font-weight: 700;
-      font-size: 16px;
-      letter-spacing: -0.02em;
-    }
-
-    .brand-subtitle {
-      font-size: 12px;
-      color: var(--text-light);
-      margin-left: 8px;
-      padding-left: 8px;
-      border-left: 1px solid var(--border);
-    }
-
-    .hw-badges {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 500;
-      background: var(--surface-subtle);
-      color: var(--text-muted);
-      border: 1px solid var(--border);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    }
-
-    .badge-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--emerald);
-    }
-
-    /* Main Layout */
-    main {
-      max-width: 1280px;
-      margin: 24px auto 64px;
-      padding: 0 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1.05fr 0.95fr;
-      gap: 24px;
-    }
-
-    @media (max-width: 980px) {
-      .grid-2 {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 22px 24px;
-    }
-
-    .card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .step-title {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-    }
-
-    .step-num {
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 2px 7px;
-      border-radius: 5px;
-      background: var(--surface-subtle);
-      color: var(--text-muted);
-      border: 1px solid var(--border-strong);
-    }
-
-    /* Form Controls */
-    .form-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 14px;
-      margin-bottom: 14px;
-    }
-
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-
-    .field label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
-
-    input[type="text"],
-    input[type="number"],
-    select {
-      padding: 8px 11px;
-      border: 1px solid var(--border-strong);
-      border-radius: 7px;
-      font-size: 13px;
+    .submetric-val {
+      font-family: var(--font-display);
+      font-size: 36px;
+      line-height: 1;
       color: var(--text);
-      background: var(--surface);
-      outline: none;
-      transition: border-color 0.15s;
     }
 
-    input:focus,
-    select:focus {
-      border-color: var(--accent);
-    }
-
-    .btn-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 14px;
-    }
-
-    button {
-      cursor: pointer;
-      border-radius: 7px;
-      font-size: 13px;
-      font-weight: 500;
-      padding: 8px 14px;
-      border: 1px solid var(--border-strong);
-      background: var(--surface);
-      color: var(--text);
-      transition: all 0.15s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    button:hover {
-      background: var(--surface-subtle);
-    }
-
-    .btn-primary {
-      background: var(--primary);
-      color: #fff;
-      border-color: var(--primary);
-      font-weight: 600;
-    }
-
-    .btn-primary:hover {
-      background: #1e293b;
-    }
-
-    .btn-accent {
-      background: var(--accent);
-      color: #fff;
-      border-color: var(--accent);
-      font-weight: 600;
-    }
-
-    .btn-accent:hover {
-      background: #1d4ed8;
-    }
-
-    .btn-xs {
-      padding: 4px 9px;
-      font-size: 11.5px;
-    }
-
-    /* Feature Selection Chips */
-    .feature-box {
-      border: 1px solid var(--border);
-      background: var(--surface-subtle);
-      border-radius: 8px;
-      padding: 10px 12px;
-      max-height: 135px;
-      overflow-y: auto;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 4px;
-    }
-
-    .feat-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 3px 9px;
-      border-radius: 6px;
-      font-size: 12px;
-      background: var(--surface);
-      border: 1px solid var(--border-strong);
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .feat-chip input {
-      margin: 0;
-    }
-
-    .feat-type {
-      font-size: 10px;
-      color: var(--text-light);
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    }
-
-    /* Tables */
-    .table-wrap {
+    /* Clean Data Table */
+    .table-container {
       overflow-x: auto;
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: var(--radius-inner);
+      background: var(--surface);
     }
 
-    table {
+    table.clean-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 12.5px;
+      font-size: 14px;
+    }
+
+    table.clean-table th {
       text-align: left;
-    }
-
-    th {
-      background: var(--surface-subtle);
-      color: var(--text-muted);
+      padding: 14px 20px;
+      font-size: 12px;
       font-weight: 600;
-      padding: 9px 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
       border-bottom: 1px solid var(--border);
-      white-space: nowrap;
+      background: var(--surface-subtle);
     }
 
-    td {
-      padding: 8px 12px;
+    table.clean-table td {
+      padding: 16px 20px;
       border-bottom: 1px solid var(--border);
       color: var(--text);
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     }
 
-    tr:last-child td {
+    table.clean-table tr:last-child td {
       border-bottom: none;
     }
 
-    .num-col {
+    .mono-cell {
+      font-family: var(--font-mono);
+      font-size: 13.5px;
       text-align: right;
     }
 
-    /* Algorithm Checkboxes */
-    .algo-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 10px;
-      margin: 10px 0 16px;
-    }
-
-    .algo-card {
-      border: 1px solid var(--border-strong);
-      border-radius: 8px;
-      padding: 10px 12px;
+    /* Footer */
+    footer.site-footer {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+      border-top: 1px solid var(--border);
       display: flex;
-      align-items: flex-start;
-      gap: 9px;
-      background: var(--surface);
-      cursor: pointer;
-    }
-
-    .algo-card:hover {
-      background: var(--surface-subtle);
-    }
-
-    .algo-name {
-      font-weight: 600;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
       font-size: 13px;
-    }
-
-    .algo-desc {
-      font-size: 11.5px;
-      color: var(--text-light);
-    }
-
-    /* Progress Bar */
-    .progress-wrap {
-      margin-top: 14px;
-      display: none;
-    }
-
-    .progress-bar-bg {
-      width: 100%;
-      height: 8px;
-      background: var(--surface-subtle);
-      border-radius: 999px;
-      overflow: hidden;
-      border: 1px solid var(--border);
-    }
-
-    .progress-bar-fill {
-      height: 100%;
-      width: 0%;
-      background: var(--accent);
-      transition: width 0.25s ease;
-    }
-
-    .progress-text {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 6px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    }
-
-    /* FVI Scorecard Hero */
-    .scorecard-hero {
-      display: grid;
-      grid-template-columns: 240px 1fr;
-      gap: 24px;
-      align-items: center;
-      padding: 20px;
-      border-radius: 10px;
-      background: var(--surface-subtle);
-      border: 1px solid var(--border-strong);
-      margin-bottom: 20px;
-    }
-
-    @media (max-width: 760px) {
-      .scorecard-hero {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .fvi-dial {
-      background: var(--surface);
-      border: 1px solid var(--border-strong);
-      border-radius: 10px;
-      padding: 18px;
-      text-align: center;
-    }
-
-    .fvi-number {
-      font-size: 46px;
-      font-weight: 800;
-      letter-spacing: -0.04em;
-      line-height: 1;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    }
-
-    .fvi-verdict {
-      display: inline-block;
-      margin-top: 10px;
-      padding: 4px 12px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .verdict-emerald {
-      background: var(--emerald-bg);
-      color: var(--emerald);
-      border: 1px solid #a7f3d0;
-    }
-
-    .verdict-amber {
-      background: var(--amber-bg);
-      color: var(--amber);
-      border: 1px solid #fde68a;
-    }
-
-    .verdict-rose {
-      background: var(--rose-bg);
-      color: var(--rose);
-      border: 1px solid #fecdd3;
-    }
-
-    .submetric-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-
-    .submetric-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 14px;
-    }
-
-    .submetric-label {
-      font-size: 11.5px;
-      color: var(--text-light);
-      font-weight: 600;
-    }
-
-    .submetric-val {
-      font-size: 20px;
-      font-weight: 700;
-      margin-top: 2px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    }
-
-    .img-frame {
-      width: 100%;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      margin-top: 12px;
-      background: #fff;
-    }
-
-    .summary-callout {
-      background: var(--surface);
-      border-left: 4px solid var(--accent);
-      padding: 12px 16px;
-      border-radius: 6px;
-      font-size: 13px;
-      color: var(--text);
+      color: var(--text-tertiary);
     }
   </style>
 </head>
 <body>
 
-  <header>
-    <div class="nav-container">
-      <div class="brand">
-        <div class="brand-mark">FVI</div>
-        <div>
-          <span class="brand-title">FedAssess</span>
-          <span class="brand-subtitle">Federated Viability Index &amp; Benchmarking Platform</span>
+  <!-- Sticky Minimalist Glassmorphism Nav -->
+  <header class="site-nav">
+    <div class="nav-inner">
+      <a href="#" class="brand-link" onclick="resetToUploadState(); return false;">
+        <span class="brand-serif">FedAssess</span>
+        <span class="brand-tag">Federated Viability Index</span>
+      </a>
+      <div class="nav-actions">
+        <div class="hw-pill" title="Active compute node and accelerator">
+          <span class="status-dot"></span>
+          <span id="nav-hw-text">Connecting...</span>
         </div>
-      </div>
-      <div class="hw-badges">
-        <span class="badge"><span class="badge-dot"></span><span id="hw-host">Inspecting host...</span></span>
-        <span class="badge" id="hw-gpu">GPU: ...</span>
-        <span class="badge" id="hw-backend">Backend: ...</span>
+        <button type="button" class="icon-btn" onclick="toggleTheme()" aria-label="Toggle color theme" title="Toggle Light / Dark theme">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+          </svg>
+        </button>
       </div>
     </div>
   </header>
 
-  <main>
-    <!-- Top 2-Column Configuration Row: Step 1 (Dataset) & Step 2 (Partitioning) -->
-    <div class="grid-2">
-      <!-- STEP 1: DATASET & SCHEMA -->
-      <section class="card">
-        <div class="card-header">
-          <div class="step-title">
-            <span class="step-num">01</span>
-            <span>Dataset &amp; Feature-Target Schema</span>
+  <main class="container">
+    <!-- Editorial Hero -->
+    <section class="hero reveal-section is-visible" id="hero-section">
+      <span class="eyebrow">Empirical Feasibility &amp; Benchmarking</span>
+      <h1>Measure whether federated learning is viable for your dataset.</h1>
+      <p>
+        Drop a tabular CSV or an image archive below. FedAssess partitions your data across simulated client silos, benchmarks collaborative training against centralized pooling and isolated local training, and computes the 0–100 Federated Viability Index.
+      </p>
+    </section>
+
+    <!-- STATE 1: CLEAN DRAG-AND-DROP UPLOAD ZONE (Visible on load) -->
+    <section class="reveal-section is-visible" id="state-upload">
+      <div
+        class="dropzone"
+        id="dropzone"
+        tabindex="0"
+        role="button"
+        aria-label="Upload dataset file"
+        onclick="document.getElementById('file-input').click()"
+      >
+        <input
+          type="file"
+          id="file-input"
+          accept=".csv,.zip"
+          style="display: none;"
+          onchange="handleFileSelected(event)"
+        />
+        <div class="dropzone-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+        </div>
+        <h2>Drop your dataset here, or click to browse</h2>
+        <p>
+          Supports <strong>.csv</strong> files for tabular datasets and <strong>.zip</strong> archives of class folders for image classification. Uploaded files are stored directly on the server in <code>data/uploads/</code>.
+        </p>
+        <span class="btn btn-primary">Select Dataset File</span>
+
+        <div class="upload-status" id="upload-status" onclick="event.stopPropagation()">
+          <div class="bar-track">
+            <div class="bar-fill" id="upload-bar-fill"></div>
           </div>
-          <span class="badge" id="modality-badge">MODALITY: AUTO</span>
-        </div>
-
-        <div class="btn-row">
-          <button type="button" class="btn-xs" onclick="selectPreset('data/pe_malware_features.csv')">
-            PE Malware Tabular CSV
-          </button>
-          <button type="button" class="btn-xs" onclick="selectPreset('data/malware_byteplots_manifest.csv')">
-            Malware Byteplots (CSV Manifest)
-          </button>
-          <button type="button" class="btn-xs" onclick="selectPreset('data/malware_byteplots')">
-            Malware Byteplots (ImageFolder)
-          </button>
-          <label class="feat-chip" style="background: var(--accent-soft); border-color: #bfdbfe; color: var(--accent); font-weight: 600;">
-            <span>Upload Custom CSV</span>
-            <input type="file" id="csv-file-input" accept=".csv" style="display: none;" onchange="handleCsvUpload(event)" />
-          </label>
-        </div>
-
-        <div class="form-row">
-          <div class="field" style="grid-column: span 2;">
-            <label>Dataset Path (Local or on `rama`)</label>
-            <div style="display: flex; gap: 8px;">
-              <input type="text" id="data-path" value="data/pe_malware_features.csv" style="flex: 1;" />
-              <button type="button" onclick="inspectDataset()">Inspect</button>
-            </div>
+          <div style="font-size: 13px; color: var(--text-secondary); margin-top: 8px; font-family: var(--font-mono);" id="upload-status-text">
+            Uploading...
           </div>
-        </div>
-
-        <div class="form-row">
-          <div class="field">
-            <label>Target Variable (Class Label)</label>
-            <select id="target-col" onchange="onTargetColumnChanged()"></select>
-          </div>
-          <div class="field" id="image-settings-group" style="display: none;">
-            <label>Image Channels &amp; Resolution</label>
-            <div style="display: flex; gap: 6px;">
-              <select id="image-channels" style="flex: 1;">
-                <option value="1">1-Ch Grayscale (Malware Byteplot)</option>
-                <option value="3">3-Ch RGB Color</option>
-              </select>
-              <select id="image-size" style="width: 88px;">
-                <option value="32">32x32</option>
-                <option value="64">64x64</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div class="field" style="margin-bottom: 12px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <label>Selected Input Features (<span id="feat-count-label">0</span> selected)</label>
-            <div style="display: flex; gap: 6px;">
-              <button type="button" class="btn-xs" onclick="toggleAllFeatures(true)">Select All</button>
-              <button type="button" class="btn-xs" onclick="toggleAllFeatures(false)">Clear</button>
-            </div>
-          </div>
-          <div class="feature-box" id="feature-chips-container"></div>
-        </div>
-
-        <div class="field">
-          <label>Dataset Preview &amp; Class Balance (<span id="row-count-label">0</span> rows)</label>
-          <div class="table-wrap" id="preview-table-container" style="max-height: 155px;"></div>
-        </div>
-      </section>
-
-      <!-- STEP 2: CLIENT PARTITION STUDIO -->
-      <section class="card">
-        <div class="card-header">
-          <div class="step-title">
-            <span class="step-num">02</span>
-            <span>Simulated Client Partitioning &amp; Skew Studio</span>
-          </div>
-          <button type="button" class="btn-xs" onclick="previewPartition()">Refresh Split Preview</button>
-        </div>
-
-        <div class="form-row">
-          <div class="field">
-            <label>Simulated Clients (M)</label>
-            <input type="number" id="num-clients" value="10" min="2" max="100" onchange="previewPartition()" />
-          </div>
-          <div class="field">
-            <label>Partitioning Strategy</label>
-            <select id="partition-strategy" onchange="onStrategyChanged()">
-              <option value="dirichlet" selected>Non-IID Dirichlet Dir(α)</option>
-              <option value="iid">IID Uniform Split</option>
-              <option value="quantity_skew">Quantity / Volume Skew</option>
-              <option value="generalist_specialist">Generalist (C0) vs. Specialists</option>
-            </select>
-          </div>
-          <div class="field" id="alpha-field">
-            <label>Dirichlet Heterogeneity (α)</label>
-            <select id="dirichlet-alpha" onchange="previewPartition()">
-              <option value="0.01">0.01 (Extreme Non-IID)</option>
-              <option value="0.05">0.05 (High Non-IID)</option>
-              <option value="0.1" selected>0.10 (Moderate Non-IID)</option>
-              <option value="0.5">0.50 (Mild Non-IID)</option>
-              <option value="5.0">5.00 (Near-IID)</option>
-            </select>
-          </div>
-          <div class="field" id="specialist-field" style="display: none;">
-            <label>Specialist Class IDs</label>
-            <input type="text" id="specialist-classes" value="0, 1" onchange="previewPartition()" />
-          </div>
-        </div>
-
-        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px;">
-          <span class="badge" id="part-entropy-badge">Mean Client Entropy: --</span>
-          <span class="badge" id="part-model-badge">Mode 1 Model: --</span>
-        </div>
-
-        <img id="partition-preview-img" class="img-frame" alt="Client Partition Preview" style="display: none;" />
-      </section>
-    </div>
-
-    <!-- STEP 3: MODE 1 UNIFIED MODEL & FL BENCHMARK EXECUTION -->
-    <section class="card">
-      <div class="card-header">
-        <div class="step-title">
-          <span class="step-num">03</span>
-          <span>Mode 1 Unified Client Model &amp; Federated Algorithms</span>
-        </div>
-        <span class="badge">GOLDEN TRIAD: CENTRALIZED + ISOLATED SILOS + FEDERATED</span>
-      </div>
-
-      <div class="form-row">
-        <div class="field">
-          <label>Unified Client Model Backbone (Mode 1)</label>
-          <select id="model-arch" onchange="previewPartition()">
-            <option value="auto" selected>Auto-Select (Tabular MLP / Vision ResNet-8)</option>
-            <option value="tabular_mlp">Tabular MLP (BatchNorm + ReLU)</option>
-            <option value="resnet8_light">Vision ResNet-8 (Lightweight)</option>
-            <option value="simple_cnn">Vision SimpleCNN (2-Block)</option>
-            <option value="resnet8">Vision ResNet-8 (Full 18.85 MiB)</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>MLP Hidden Layer Widths</label>
-          <input type="text" id="hidden-dims" value="128, 64" />
-        </div>
-        <div class="field">
-          <label>Iterative FL Global Rounds</label>
-          <input type="number" id="fl-rounds" value="20" min="2" max="200" />
-        </div>
-        <div class="field">
-          <label>Client Local Epochs / Steps</label>
-          <input type="number" id="local-epochs" value="2" min="1" max="50" />
-        </div>
-        <div class="field">
-          <label>FENS Phase-1 Local Epochs</label>
-          <input type="number" id="fens-p1-epochs" value="20" min="2" max="500" />
         </div>
       </div>
 
-      <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">
-        Federated Learning Algorithms to Benchmark (Centralized &amp; Isolated Silos run automatically):
-      </label>
-      <div class="algo-grid">
-        <label class="algo-card">
-          <input type="checkbox" class="algo-cb" value="fedavg" checked />
-          <div>
-            <div class="algo-name">FedAvg</div>
-            <div class="algo-desc">Standard coordinate weight averaging (McMahan et al.)</div>
+      <!-- Quiet option for existing server path on rama -->
+      <div style="margin-top: 20px; text-align: center;">
+        <details style="display: inline-block; text-align: left;">
+          <summary style="font-size: 13px; color: var(--text-tertiary); cursor: pointer;">
+            Or inspect a dataset path already stored on the server
+          </summary>
+          <div style="margin-top: 12px; display: flex; gap: 8px; align-items: center;">
+            <input
+              type="text"
+              id="server-path-input"
+              class="clean-input"
+              placeholder="/path/on/rama/dataset.csv"
+              style="height: 40px; width: 320px; font-size: 13.5px;"
+            />
+            <button type="button" class="btn btn-sm" onclick="inspectServerPath()">Load Path</button>
           </div>
-        </label>
-        <label class="algo-card">
-          <input type="checkbox" class="algo-cb" value="fedprox" checked />
-          <div>
-            <div class="algo-name">FedProx</div>
-            <div class="algo-desc">Proximal regularization against non-IID client drift</div>
-          </div>
-        </label>
-        <label class="algo-card">
-          <input type="checkbox" class="algo-cb" value="fedadam" checked />
-          <div>
-            <div class="algo-name">FedAdam</div>
-            <div class="algo-desc">Adaptive server momentum optimization (Reddi et al.)</div>
-          </div>
-        </label>
-        <label class="algo-card">
-          <input type="checkbox" class="algo-cb" value="fens" checked />
-          <div>
-            <div class="algo-name">FENS + FedEns (NeurIPS 2024)</div>
-            <div class="algo-desc">One-shot INT8 ensemble + Phase-2 FedAdam aggregator</div>
-          </div>
-        </label>
-      </div>
-
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <button type="button" class="btn-accent" id="run-btn" onclick="startBenchmark()">
-          Run Federated Viability Index Benchmark
-        </button>
-        <span style="font-size: 12px; color: var(--text-light);">
-          Computes Centralized Upper Bound, Isolated Client Silos, FL Strategies, and the 0–100 FVI Scorecard.
-        </span>
-      </div>
-
-      <div class="progress-wrap" id="progress-wrap">
-        <div class="progress-bar-bg">
-          <div class="progress-bar-fill" id="progress-fill"></div>
-        </div>
-        <div class="progress-text" id="progress-text">Starting...</div>
+        </details>
       </div>
     </section>
 
-    <!-- STEP 4: FVI SCORECARD & BENCHMARK RESULTS -->
-    <section class="card" id="results-section" style="display: none;">
-      <div class="card-header">
-        <div class="step-title">
-          <span class="step-num">04</span>
-          <span>Federated Viability Index (FVI) Scorecard &amp; Benchmark Report</span>
+    <!-- STATE 2: CLEAN CONFIGURATION (Hidden until a dataset is loaded) -->
+    <section class="editorial-card reveal-section" id="state-configure" style="display: none;">
+      <span class="eyebrow">Step 01 — Simulation Setup</span>
+
+      <!-- Loaded File Summary Banner -->
+      <div class="dataset-banner">
+        <div class="dataset-meta">
+          <div class="dropzone-icon" style="margin: 0; width: 42px; height: 42px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+          </div>
+          <div>
+            <div class="dataset-name" id="loaded-filename">dataset.csv</div>
+            <div class="dataset-sub" id="loaded-meta">0 rows · Tabular</div>
+          </div>
         </div>
-        <div style="display: flex; gap: 8px;">
-          <button type="button" class="btn-xs" onclick="downloadMarkdownReport()">Download Markdown Report (.md)</button>
-          <button type="button" class="btn-xs" onclick="downloadJsonResults()">Download JSON Metrics (.json)</button>
+        <button type="button" class="btn btn-sm" onclick="resetToUploadState()">
+          Change Dataset
+        </button>
+      </div>
+
+      <!-- Question 1 & Question 2 -->
+      <div class="config-grid">
+        <div class="control-group">
+          <label class="control-label" for="target-col">1. Target Variable to Predict</label>
+          <span class="control-hint">Select the label column representing the class or outcome.</span>
+          <select id="target-col" class="clean-select" onchange="onTargetChanged()"></select>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label" for="num-clients">2. Number of Simulated Clients</label>
+          <span class="control-hint">How many participating silos to partition the training set across.</span>
+          <select id="num-clients" class="clean-select">
+            <option value="2">2 Clients (Pairwise Silos)</option>
+            <option value="5">5 Clients (Small Consortium)</option>
+            <option value="10" selected>10 Clients (Standard Cross-Silo)</option>
+            <option value="20">20 Clients (Distributed Network)</option>
+          </select>
         </div>
       </div>
 
-      <div class="scorecard-hero">
-        <div class="fvi-dial">
-          <div style="font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
-            Federated Viability Index
+      <!-- Question 3: Client Data Distribution -->
+      <div class="control-group" style="margin-bottom: 8px;">
+        <label class="control-label">3. Data Distribution Across Clients</label>
+        <span class="control-hint">Choose how heterogeneous the class distributions should be across simulated silos.</span>
+      </div>
+
+      <div class="skew-cards">
+        <div class="skew-card active" data-skew="realistic" onclick="selectSkewPreset('realistic', this)">
+          <div class="skew-title">
+            <span>Realistic Skew</span>
+            <span style="font-family: var(--font-mono); font-size: 12px; color: var(--accent);">Dir(α = 0.1)</span>
           </div>
-          <div class="fvi-number" id="fvi-score-val">--</div>
-          <div style="font-size: 11px; color: var(--text-light); margin-top: 2px;">out of 100</div>
-          <div class="fvi-verdict" id="fvi-verdict-badge">--</div>
+          <div class="skew-desc">
+            Moderate non-IID imbalance typical of real-world organizational silos with uneven class frequencies.
+          </div>
         </div>
 
+        <div class="skew-card" data-skew="extreme" onclick="selectSkewPreset('extreme', this)">
+          <div class="skew-title">
+            <span>Extreme Skew</span>
+            <span style="font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary);">Dir(α = 0.01)</span>
+          </div>
+          <div class="skew-desc">
+            Severe statistical heterogeneity where each client predominantly observes only one or two classes.
+          </div>
+        </div>
+
+        <div class="skew-card" data-skew="iid" onclick="selectSkewPreset('iid', this)">
+          <div class="skew-title">
+            <span>Balanced (IID)</span>
+            <span style="font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary);">Uniform</span>
+          </div>
+          <div class="skew-desc">
+            Every client receives an evenly stratified random sample of all classes in the dataset.
+          </div>
+        </div>
+      </div>
+
+      <!-- Collapsible Drawer for Feature Refining & Advanced Knobs -->
+      <details class="advanced-drawer">
+        <summary>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="21" x2="4" y2="14"></line>
+            <line x1="4" y1="10" x2="4" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12" y2="3"></line>
+            <line x1="20" y1="21" x2="20" y2="16"></line>
+            <line x1="20" y1="12" x2="20" y2="3"></line>
+          </svg>
+          <span>Refine input features (<span id="active-feat-count">0</span> active) &amp; training parameters</span>
+        </summary>
+
+        <div class="drawer-body">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 13.5px; font-weight: 600;">Input Feature Columns (uncheck ID or timestamp columns to exclude):</span>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-sm" onclick="setAllFeatures(true)">Select All</button>
+              <button type="button" class="btn btn-sm" onclick="setAllFeatures(false)">Clear</button>
+            </div>
+          </div>
+          <div class="feature-pills" id="feature-pills-box"></div>
+
+          <div class="config-grid" style="margin-top: 24px; margin-bottom: 0;">
+            <div class="control-group">
+              <label class="control-label" for="fl-rounds">Communication Rounds</label>
+              <input type="number" id="fl-rounds" class="clean-input" value="20" min="3" max="200" />
+            </div>
+            <div class="control-group">
+              <label class="control-label" for="local-epochs">Client Local Epochs per Round</label>
+              <input type="number" id="local-epochs" class="clean-input" value="2" min="1" max="50" />
+            </div>
+          </div>
+
+          <div style="margin-top: 20px;">
+            <button type="button" class="btn btn-sm" onclick="loadPartitionPreview()">
+              Preview Client Class Distribution Chart
+            </button>
+            <img id="partition-chart-img" alt="Client Partition Distribution" style="width: 100%; border-radius: 10px; margin-top: 16px; display: none; border: 1px solid var(--border);" />
+          </div>
+        </div>
+      </details>
+
+      <!-- Primary Action Bar -->
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+        <button type="button" class="btn btn-primary" id="run-bench-btn" onclick="startViabilityEvaluation()">
+          <span>Evaluate Federated Viability</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+
+        <div id="run-progress-box" style="flex: 1; min-width: 260px; display: none;">
+          <div class="bar-track">
+            <div class="bar-fill" id="run-bar-fill"></div>
+          </div>
+          <div style="font-size: 13px; color: var(--text-secondary); margin-top: 6px; font-family: var(--font-mono);" id="run-status-label">
+            Initializing...
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STATE 3: EDITORIAL FEDERATED VIABILITY INDEX SCORECARD -->
+    <section class="reveal-section" id="state-results" style="display: none;">
+      <div style="display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
         <div>
-          <div class="submetric-grid">
-            <div class="submetric-card">
-              <div class="submetric-label">Centralized Parity (CPR)</div>
-              <div class="submetric-val" id="cpr-val">--%</div>
-              <div style="font-size: 11px; color: var(--text-light);">vs. Pooled Upper Bound (<span id="cent-acc-inline">--</span>)</div>
-            </div>
-            <div class="submetric-card">
-              <div class="submetric-label">Collaboration Gain (CG)</div>
-              <div class="submetric-val" id="cg-val">--%</div>
-              <div style="font-size: 11px; color: var(--text-light);">vs. Isolated Silos (<span id="iso-acc-inline">--</span>)</div>
-            </div>
-            <div class="submetric-card">
-              <div class="submetric-label">Heterogeneity Resilience (HR)</div>
-              <div class="submetric-val" id="hr-val">--%</div>
-              <div style="font-size: 11px; color: var(--text-light);">Non-IID vs. IID Stability</div>
+          <span class="eyebrow">Step 02 — Empirical Verdict</span>
+          <h2 style="font-family: var(--font-display); font-size: 38px; font-weight: 400; line-height: 1.1;">
+            Federated Viability Scorecard
+          </h2>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button type="button" class="btn btn-sm" onclick="exportMarkdown()">Export Report (.md)</button>
+          <button type="button" class="btn btn-sm" onclick="exportJson()">Export Metrics (.json)</button>
+          <button type="button" class="btn btn-sm" onclick="resetToUploadState()">New Dataset</button>
+        </div>
+      </div>
+
+      <!-- Asymmetric Editorial Grid: Big FVI Score + 3 Sub-Scores -->
+      <div class="scorecard-grid">
+        <div class="fvi-hero-box">
+          <div>
+            <div class="verdict-pill" id="res-verdict-pill">—</div>
+            <div class="fvi-big-score" id="res-fvi-score">—</div>
+            <div style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); margin-bottom: 20px;">
+              Composite Viability Index (0–100)
             </div>
           </div>
+          <div>
+            <p style="font-size: 15.5px; color: var(--text); margin-bottom: 10px;" id="res-summary-text"></p>
+            <p style="font-size: 14px; color: var(--text-secondary);" id="res-rec-text"></p>
+          </div>
+        </div>
 
-          <div class="summary-callout">
-            <div style="font-weight: 600; margin-bottom: 4px;" id="exec-summary-text"></div>
-            <div style="color: var(--text-muted); font-size: 12.5px;" id="exec-rec-text"></div>
+        <div class="submetrics-stack">
+          <div class="submetric-row">
+            <div>
+              <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary);">
+                Centralized Parity Ratio (CPR)
+              </div>
+              <div style="font-size: 14px; color: var(--text-secondary); margin-top: 4px;">
+                Accuracy retained relative to 100% pooled centralized training (<span id="res-cent-acc">—</span>)
+              </div>
+            </div>
+            <div class="submetric-val" id="res-cpr-val">—</div>
+          </div>
+
+          <div class="submetric-row">
+            <div>
+              <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary);">
+                Collaboration Gain (CG)
+              </div>
+              <div style="font-size: 14px; color: var(--text-secondary); margin-top: 4px;">
+                Gap closed over isolated client silos training alone (<span id="res-iso-acc">—</span>)
+              </div>
+            </div>
+            <div class="submetric-val" id="res-cg-val">—</div>
+          </div>
+
+          <div class="submetric-row">
+            <div>
+              <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary);">
+                Heterogeneity Resilience (HR)
+              </div>
+              <div style="font-size: 14px; color: var(--text-secondary); margin-top: 4px;">
+                Stability under client skew relative to an IID reference split
+              </div>
+            </div>
+            <div class="submetric-val" id="res-hr-val">—</div>
           </div>
         </div>
       </div>
 
-      <h4 style="font-size: 13.5px; font-weight: 600; margin-bottom: 10px;">
-        Golden Triad &amp; Federated Strategy Benchmark Table
-      </h4>
-      <div class="table-wrap" id="results-table-wrap" style="margin-bottom: 20px;"></div>
+      <!-- Golden Triad Comparison Table -->
+      <div class="editorial-card">
+        <span class="eyebrow">Comparative Benchmark</span>
+        <h3 style="font-family: var(--font-display); font-size: 28px; font-weight: 400; margin-bottom: 20px;">
+          Centralized vs. Isolated Client Silos vs. Federated Strategies
+        </h3>
+        <div class="table-container" id="res-table-box"></div>
+      </div>
 
-      <h4 style="font-size: 13.5px; font-weight: 600; margin-bottom: 6px;">
-        Diagnostic Visual Suite
-      </h4>
-      <img id="dashboard-chart-img" class="img-frame" alt="FVI Benchmark Dashboard" />
+      <!-- Visual Diagnostic Suite -->
+      <div class="editorial-card">
+        <span class="eyebrow">Diagnostic Trajectories</span>
+        <h3 style="font-family: var(--font-display); font-size: 28px; font-weight: 400; margin-bottom: 16px;">
+          Convergence, Client Collaboration Gain &amp; FVI Breakdown
+        </h3>
+        <img id="res-dashboard-img" alt="Federated Viability Diagnostic Plots" style="width: 100%; border-radius: 12px; border: 1px solid var(--border);" />
+      </div>
     </section>
   </main>
 
+  <footer class="site-footer">
+    <div>FedAssess — Federated Viability Index &amp; Benchmarking Platform</div>
+    <div id="footer-storage-info">Uploads stored locally on server in data/uploads/</div>
+  </footer>
+
   <script>
-    let currentSchema = null;
-    let latestResult = null;
-    let pollTimer = null;
+    let activeSchema = null;
+    let selectedSkew = 'realistic'; // 'realistic' (Dir 0.1), 'extreme' (Dir 0.01), or 'iid'
+    let latestBenchmarkResult = null;
+    let pollInterval = null;
 
-    async function loadSystemStatus() {
-      const res = await fetch('/api/system-status');
-      const data = await res.json();
-      document.getElementById('hw-host').textContent = `Host: ${data.hostname} (${data.conda_env})`;
-      document.getElementById('hw-gpu').textContent = `${data.gpu_name}${data.vram_gib ? ' (' + data.vram_gib + ' GiB)' : ''}`;
-      document.getElementById('hw-backend').textContent = `${data.backend}${data.bf16_supported ? ' + BF16' : ''}`;
-    }
-
-    function selectPreset(path) {
-      document.getElementById('data-path').value = path;
-      inspectDataset();
-    }
-
-    async function handleCsvUpload(ev) {
-      const file = ev.target.files[0];
-      if (!file) return;
-      const content = await file.text();
-      const res = await fetch('/api/upload-csv', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: file.name, content })
-      });
-      const schema = await res.json();
-      if (schema.error) {
-        alert(schema.error);
-        return;
+    function toggleTheme() {
+      const root = document.documentElement;
+      const current = root.getAttribute('data-theme');
+      if (current === 'dark') {
+        root.setAttribute('data-theme', 'light');
+      } else if (current === 'light') {
+        root.setAttribute('data-theme', 'dark');
+      } else {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        root.setAttribute('data-theme', prefersDark ? 'light' : 'dark');
       }
-      document.getElementById('data-path').value = schema.data_path;
-      renderSchema(schema);
-      previewPartition();
     }
 
-    async function inspectDataset(targetOverride = null) {
-      const dataPath = document.getElementById('data-path').value.trim();
+    async function fetchSystemStatus() {
+      try {
+        const res = await fetch('/api/system-status');
+        const info = await res.json();
+        const vram = info.vram_gib ? ` · ${info.vram_gib} GB` : '';
+        document.getElementById('nav-hw-text').textContent = `${info.hostname} · ${info.gpu_name}${vram}`;
+        document.getElementById('footer-storage-info').textContent = `Dropped datasets saved on ${info.hostname} in data/uploads/ (${info.disk_free_gib} GiB free)`;
+      } catch (e) {
+        document.getElementById('nav-hw-text').textContent = 'Server Ready';
+      }
+    }
+
+    // Drag and Drop Wiring
+    const dz = document.getElementById('dropzone');
+    ['dragenter', 'dragover'].forEach(evtName => {
+      dz.addEventListener(evtName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dz.classList.add('drag-active');
+      });
+    });
+    ['dragleave', 'drop'].forEach(evtName => {
+      dz.addEventListener(evtName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dz.classList.remove('drag-active');
+      });
+    });
+    dz.addEventListener('drop', (e) => {
+      const files = e.dataTransfer.files;
+      if (files && files.length > 0) {
+        uploadFileToServer(files[0]);
+      }
+    });
+
+    function handleFileSelected(ev) {
+      const file = ev.target.files[0];
+      if (file) {
+        uploadFileToServer(file);
+      }
+    }
+
+    function uploadFileToServer(file) {
+      const statusBox = document.getElementById('upload-status');
+      const barFill = document.getElementById('upload-bar-fill');
+      const statusTxt = document.getElementById('upload-status-text');
+
+      statusBox.style.display = 'block';
+      barFill.style.width = '5%';
+      statusTxt.textContent = `Uploading ${file.name}...`;
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/upload-dataset', true);
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 90);
+          barFill.style.width = `${pct}%`;
+          statusTxt.textContent = `Uploading ${file.name} (${pct}%)...`;
+        }
+      };
+
+      xhr.onload = () => {
+        statusBox.style.display = 'none';
+        try {
+          const resp = JSON.parse(xhr.responseText);
+          if (xhr.status >= 400 || resp.error) {
+            alert(resp.error || 'Upload failed.');
+            return;
+          }
+          onSchemaLoaded(resp);
+        } catch (err) {
+          alert('Failed to parse server response.');
+        }
+      };
+
+      xhr.onerror = () => {
+        statusBox.style.display = 'none';
+        alert('Network error while uploading file.');
+      };
+
+      xhr.send(formData);
+    }
+
+    async function inspectServerPath() {
+      const p = document.getElementById('server-path-input').value.trim();
+      if (!p) return;
       const res = await fetch('/api/inspect-dataset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data_path: dataPath, target_column: targetOverride })
+        body: JSON.stringify({ data_path: p })
       });
       const schema = await res.json();
-      if (!schema.exists) {
-        alert(schema.error_message || 'Dataset path not found.');
+      if (!schema.exists || schema.error) {
+        alert(schema.error_message || schema.error || 'Path not found on server.');
         return;
       }
-      renderSchema(schema);
-      previewPartition();
+      onSchemaLoaded(schema);
     }
 
-    function renderSchema(schema) {
-      currentSchema = schema;
-      document.getElementById('modality-badge').textContent = `MODALITY: ${schema.detected_modality.toUpperCase()} (${schema.source_format.toUpperCase()})`;
-      document.getElementById('row-count-label').textContent = schema.num_rows;
+    function onSchemaLoaded(schema) {
+      activeSchema = schema;
 
-      const imgGroup = document.getElementById('image-settings-group');
-      imgGroup.style.display = schema.detected_modality === 'image' ? 'flex' : 'none';
+      // Transition from State 1 (Upload) -> State 2 (Configure)
+      document.getElementById('state-upload').style.display = 'none';
+      const cfgSec = document.getElementById('state-configure');
+      cfgSec.style.display = 'block';
+      requestAnimationFrame(() => cfgSec.classList.add('is-visible'));
 
-      // Populate Target Dropdown
+      const fname = schema.uploaded_filename || schema.data_path.split('/').pop();
+      const sizeStr = schema.uploaded_size_mb ? ` · ${schema.uploaded_size_mb} MB` : '';
+      document.getElementById('loaded-filename').textContent = fname;
+      document.getElementById('loaded-meta').textContent = `${schema.num_rows.toLocaleString()} samples · ${schema.columns.length} columns · ${schema.detected_modality.toUpperCase()}${sizeStr}`;
+
       const targetSel = document.getElementById('target-col');
       targetSel.innerHTML = '';
-      schema.columns.forEach(col => {
+      schema.columns.forEach(c => {
         const opt = document.createElement('option');
-        opt.value = col.name;
-        opt.textContent = `${col.name} (${col.unique_count} unique)`;
-        if (col.name === schema.suggested_target) opt.selected = true;
+        opt.value = c.name;
+        opt.textContent = `${c.name} (${c.unique_count} classes/values)`;
+        if (c.name === schema.suggested_target) opt.selected = true;
         targetSel.appendChild(opt);
       });
 
-      renderFeatureChips(schema, targetSel.value);
-      renderPreviewTable(schema);
+      populateFeaturePills(schema, targetSel.value);
+      document.getElementById('partition-chart-img').style.display = 'none';
     }
 
-    function onTargetColumnChanged() {
+    function onTargetChanged() {
+      if (!activeSchema) return;
       const newTarget = document.getElementById('target-col').value;
-      inspectDataset(newTarget);
+      populateFeaturePills(activeSchema, newTarget);
     }
 
-    function renderFeatureChips(schema, selectedTarget) {
-      const box = document.getElementById('feature-chips-container');
+    function populateFeaturePills(schema, targetCol) {
+      const box = document.getElementById('feature-pills-box');
       box.innerHTML = '';
-      const suggestedSet = new Set(schema.suggested_features);
-
-      schema.columns.forEach(col => {
-        if (col.name === selectedTarget) return;
+      schema.columns.forEach(c => {
+        if (c.name === targetCol) return;
         const lbl = document.createElement('label');
-        lbl.className = 'feat-chip';
+        lbl.className = 'feat-pill';
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.className = 'feat-cb';
-        cb.value = col.name;
-        cb.checked = suggestedSet.has(col.name);
-        cb.onchange = updateFeatureCountLabel;
-
-        const spanName = document.createElement('span');
-        spanName.textContent = col.name;
-        const spanType = document.createElement('span');
-        spanType.className = 'feat-type';
-        spanType.textContent = col.inferred_type === 'numerical' ? '#num' : (col.inferred_type === 'image_path' ? 'img' : 'cat');
-
+        cb.value = c.name;
+        cb.checked = true;
+        cb.onchange = updateActiveFeatureCount;
+        const span = document.createElement('span');
+        span.textContent = c.name;
         lbl.appendChild(cb);
-        lbl.appendChild(spanName);
-        lbl.appendChild(spanType);
+        lbl.appendChild(span);
         box.appendChild(lbl);
       });
-      updateFeatureCountLabel();
+      updateActiveFeatureCount();
     }
 
-    function updateFeatureCountLabel() {
-      const cbs = document.querySelectorAll('.feat-cb:checked');
-      document.getElementById('feat-count-label').textContent = cbs.length;
+    function updateActiveFeatureCount() {
+      const cnt = document.querySelectorAll('.feat-cb:checked').length;
+      document.getElementById('active-feat-count').textContent = cnt;
     }
 
-    function toggleAllFeatures(state) {
-      document.querySelectorAll('.feat-cb').forEach(cb => { cb.checked = state; });
-      updateFeatureCountLabel();
+    function setAllFeatures(checked) {
+      document.querySelectorAll('.feat-cb').forEach(cb => { cb.checked = checked; });
+      updateActiveFeatureCount();
     }
 
-    function renderPreviewTable(schema) {
-      const wrap = document.getElementById('preview-table-container');
-      if (!schema.preview_rows || schema.preview_rows.length === 0) {
-        wrap.innerHTML = '<div style="padding: 10px; color: var(--text-light);">No preview rows.</div>';
-        return;
-      }
-      const cols = schema.columns.slice(0, 6).map(c => c.name);
-      if (!cols.includes(schema.suggested_target) && schema.suggested_target) {
-        cols.push(schema.suggested_target);
-      }
-
-      let html = '<table><thead><tr>';
-      cols.forEach(c => { html += `<th>${c}</th>`; });
-      html += '</tr></thead><tbody>';
-      schema.preview_rows.slice(0, 4).forEach(r => {
-        html += '<tr>';
-        cols.forEach(c => { html += `<td>${r[c] !== undefined ? r[c] : ''}</td>`; });
-        html += '</tr>';
-      });
-      html += '</tbody></table>';
-      wrap.innerHTML = html;
+    function selectSkewPreset(preset, el) {
+      selectedSkew = preset;
+      document.querySelectorAll('.skew-card').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
     }
 
-    function onStrategyChanged() {
-      const strat = document.getElementById('partition-strategy').value;
-      document.getElementById('alpha-field').style.display = (strat === 'dirichlet' || strat === 'quantity_skew') ? 'flex' : 'none';
-      document.getElementById('specialist-field').style.display = (strat === 'generalist_specialist') ? 'flex' : 'none';
-      previewPartition();
+    function resetToUploadState() {
+      activeSchema = null;
+      document.getElementById('file-input').value = '';
+      document.getElementById('state-configure').style.display = 'none';
+      document.getElementById('state-results').style.display = 'none';
+      document.getElementById('state-upload').style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function buildJobPayload() {
+    function buildBenchmarkPayload() {
       const checkedFeats = Array.from(document.querySelectorAll('.feat-cb:checked')).map(cb => cb.value);
-      const checkedAlgos = Array.from(document.querySelectorAll('.algo-cb:checked')).map(cb => cb.value);
-      const modality = currentSchema ? currentSchema.detected_modality : 'auto';
+      let strategy = 'dirichlet';
+      let alpha = 0.1;
+      if (selectedSkew === 'iid') {
+        strategy = 'iid';
+        alpha = 1.0;
+      } else if (selectedSkew === 'extreme') {
+        strategy = 'dirichlet';
+        alpha = 0.01;
+      } else {
+        strategy = 'dirichlet';
+        alpha = 0.1;
+      }
+
+      const rounds = parseInt(document.getElementById('fl-rounds').value || '20', 10);
+      const localEp = parseInt(document.getElementById('local-epochs').value || '2', 10);
 
       return {
         dataset: {
-          data_path: document.getElementById('data-path').value.trim(),
-          modality: modality,
+          data_path: activeSchema.data_path,
+          modality: activeSchema.detected_modality,
           target_column: document.getElementById('target-col').value,
           feature_columns: checkedFeats.length > 0 ? checkedFeats : ['all'],
-          image_channels: parseInt(document.getElementById('image-channels').value || '1', 10),
-          image_size: parseInt(document.getElementById('image-size').value || '32', 10),
+          image_channels: 1,
+          image_size: 32,
         },
         partition: {
           num_clients: parseInt(document.getElementById('num-clients').value || '10', 10),
-          strategy: document.getElementById('partition-strategy').value,
-          dirichlet_alpha: parseFloat(document.getElementById('dirichlet-alpha').value || '0.1'),
-          specialist_classes: document.getElementById('specialist-classes').value,
+          strategy: strategy,
+          dirichlet_alpha: alpha,
         },
         model: {
-          arch: document.getElementById('model-arch').value,
-          hidden_dims: document.getElementById('hidden-dims').value,
+          arch: 'auto',
+          hidden_dims: [128, 64],
         },
         benchmark: {
-          algorithms: checkedAlgos.length > 0 ? checkedAlgos : ['fedavg', 'fens'],
-          fl_global_rounds: parseInt(document.getElementById('fl-rounds').value || '20', 10),
-          fl_local_epochs: parseInt(document.getElementById('local-epochs').value || '2', 10),
-          centralized_epochs: parseInt(document.getElementById('fens-p1-epochs').value || '20', 10),
-          isolated_epochs: parseInt(document.getElementById('fens-p1-epochs').value || '20', 10),
-          fens_phase1_epochs: parseInt(document.getElementById('fens-p1-epochs').value || '20', 10),
+          algorithms: ['fedavg', 'fedprox', 'fedadam', 'fens'],
+          fl_global_rounds: rounds,
+          fl_local_epochs: localEp,
+          centralized_epochs: rounds,
+          isolated_epochs: rounds,
+          fens_phase1_epochs: rounds,
         }
       };
     }
 
-    async function previewPartition() {
-      const payload = buildJobPayload();
+    async function loadPartitionPreview() {
+      if (!activeSchema) return;
+      const payload = buildBenchmarkPayload();
       const res = await fetch('/api/preview-partition', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       const data = await res.json();
-      if (data.error) return;
-
-      document.getElementById('part-entropy-badge').textContent = `Mean Client Entropy: ${data.partition.mean_normalized_entropy.toFixed(3)} / 1.000`;
-      document.getElementById('part-model-badge').textContent = `Model: ${data.model_spec.arch_name} (${data.model_spec.num_parameters.toLocaleString()} params, ${data.model_spec.fp32_size_mib} MiB)`;
-
-      const img = document.getElementById('partition-preview-img');
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+      const img = document.getElementById('partition-chart-img');
       img.src = data.partition_chart_base64;
       img.style.display = 'block';
     }
 
-    async function startBenchmark() {
-      const payload = buildJobPayload();
-      document.getElementById('run-btn').disabled = true;
-      const pWrap = document.getElementById('progress-wrap');
-      pWrap.style.display = 'block';
-      document.getElementById('progress-fill').style.width = '4%';
-      document.getElementById('progress-text').textContent = 'Submitting benchmark job...';
+    async function startViabilityEvaluation() {
+      if (!activeSchema) return;
+      const payload = buildBenchmarkPayload();
+      const btn = document.getElementById('run-bench-btn');
+      const progBox = document.getElementById('run-progress-box');
+      btn.disabled = true;
+      progBox.style.display = 'block';
+      document.getElementById('run-bar-fill').style.width = '5%';
+      document.getElementById('run-status-label').textContent = 'Starting Federated Viability evaluation...';
 
       const res = await fetch('/api/run-benchmark', {
         method: 'POST',
@@ -1035,132 +1361,129 @@
       const data = await res.json();
       if (data.error) {
         alert(data.error);
-        document.getElementById('run-btn').disabled = false;
+        btn.disabled = false;
+        progBox.style.display = 'none';
         return;
       }
-
-      pollTimer = setInterval(pollJobStatus, 600);
+      pollInterval = setInterval(pollStatus, 600);
     }
 
-    async function pollJobStatus() {
+    async function pollStatus() {
       const res = await fetch('/api/job-status');
       const state = await res.json();
-      document.getElementById('progress-fill').style.width = `${state.progress}%`;
-      document.getElementById('progress-text').textContent = `[${state.progress}%] ${state.message}`;
+      document.getElementById('run-bar-fill').style.width = `${state.progress}%`;
+      document.getElementById('run-status-label').textContent = `${state.progress}% — ${state.message}`;
 
       if (!state.running) {
-        clearInterval(pollTimer);
-        document.getElementById('run-btn').disabled = false;
+        clearInterval(pollInterval);
+        document.getElementById('run-bench-btn').disabled = false;
+        document.getElementById('run-progress-box').style.display = 'none';
         if (state.error) {
           alert(state.error);
         } else if (state.result) {
-          renderBenchmarkResults(state.result);
+          showResults(state.result);
         }
       }
     }
 
-    function renderBenchmarkResults(result) {
-      latestResult = result;
+    function showResults(result) {
+      latestBenchmarkResult = result;
       const sc = result.scorecard;
-      const sec = document.getElementById('results-section');
-      sec.style.display = 'block';
 
-      document.getElementById('fvi-score-val').textContent = sc.overall_fvi_score.toFixed(1);
-      const badge = document.getElementById('fvi-verdict-badge');
-      badge.textContent = sc.verdict_tier;
-      badge.className = `fvi-verdict verdict-${sc.verdict_color}`;
+      const resSec = document.getElementById('state-results');
+      resSec.style.display = 'block';
+      requestAnimationFrame(() => resSec.classList.add('is-visible'));
 
-      document.getElementById('cpr-val').textContent = `${sc.cpr_score.toFixed(1)}%`;
-      document.getElementById('cg-val').textContent = `${sc.cg_score.toFixed(1)}%`;
-      document.getElementById('hr-val').textContent = `${sc.hr_score.toFixed(1)}%`;
-      document.getElementById('cent-acc-inline').textContent = `${sc.centralized_accuracy.toFixed(2)}%`;
-      document.getElementById('iso-acc-inline').textContent = `${sc.isolated_weighted_accuracy.toFixed(2)}%`;
+      document.getElementById('res-fvi-score').textContent = sc.overall_fvi_score.toFixed(1);
+      const pill = document.getElementById('res-verdict-pill');
+      pill.textContent = sc.verdict_tier;
+      pill.className = `verdict-pill verdict-${sc.verdict_color}`;
 
-      document.getElementById('exec-summary-text').textContent = sc.executive_summary;
-      document.getElementById('exec-rec-text').textContent = `Recommendation: ${sc.recommendation}`;
+      document.getElementById('res-summary-text').textContent = sc.executive_summary;
+      document.getElementById('res-rec-text').textContent = sc.recommendation;
 
-      // Build Golden Triad Comparison Table
-      let html = `<table>
+      document.getElementById('res-cpr-val').textContent = `${sc.cpr_score.toFixed(1)}%`;
+      document.getElementById('res-cg-val').textContent = `${sc.cg_score.toFixed(1)}%`;
+      document.getElementById('res-hr-val').textContent = `${sc.hr_score.toFixed(1)}%`;
+      document.getElementById('res-cent-acc').textContent = `${sc.centralized_accuracy.toFixed(2)}%`;
+      document.getElementById('res-iso-acc').textContent = `${sc.isolated_weighted_accuracy.toFixed(2)}%`;
+
+      let html = `<table class="clean-table">
         <thead>
           <tr>
-            <th>Benchmark / Strategy</th>
-            <th class="num-col">Test Accuracy</th>
-            <th class="num-col">Macro-F1</th>
-            <th class="num-col">Delta vs. Centralized</th>
-            <th class="num-col">Gain vs. Isolated Silos</th>
-            <th class="num-col">Comm. Volume (MiB)</th>
-            <th class="num-col">FVI Score</th>
+            <th>Strategy / Baseline</th>
+            <th style="text-align: right;">Test Accuracy</th>
+            <th style="text-align: right;">Macro-F1</th>
+            <th style="text-align: right;">vs. Centralized</th>
+            <th style="text-align: right;">Gain vs. Isolated</th>
+            <th style="text-align: right;">Comm. (MiB)</th>
+            <th style="text-align: right;">FVI</th>
           </tr>
         </thead>
         <tbody>
-          <tr style="background: #f8fafc;">
-            <td><strong>Centralized (Pooled Upper Bound)</strong></td>
-            <td class="num-col"><strong>${sc.centralized_accuracy.toFixed(2)}%</strong></td>
-            <td class="num-col">${sc.centralized_macro_f1.toFixed(2)}%</td>
-            <td class="num-col">0.00%</td>
-            <td class="num-col">+${(sc.centralized_accuracy - sc.isolated_weighted_accuracy).toFixed(2)}%</td>
-            <td class="num-col">0.000</td>
-            <td class="num-col">—</td>
+          <tr>
+            <td><strong>Centralized Pooled (Upper Bound)</strong></td>
+            <td class="mono-cell"><strong>${sc.centralized_accuracy.toFixed(2)}%</strong></td>
+            <td class="mono-cell">${sc.centralized_macro_f1.toFixed(2)}%</td>
+            <td class="mono-cell">0.00%</td>
+            <td class="mono-cell">+${(sc.centralized_accuracy - sc.isolated_weighted_accuracy).toFixed(2)}%</td>
+            <td class="mono-cell">0.00</td>
+            <td class="mono-cell">—</td>
           </tr>
-          <tr style="background: #f8fafc;">
+          <tr>
             <td><strong>Isolated Client Silos (Lower Bound)</strong></td>
-            <td class="num-col"><strong>${sc.isolated_weighted_accuracy.toFixed(2)}%</strong></td>
-            <td class="num-col">${sc.isolated_weighted_macro_f1.toFixed(2)}%</td>
-            <td class="num-col">${(sc.isolated_weighted_accuracy - sc.centralized_accuracy).toFixed(2)}%</td>
-            <td class="num-col">0.00%</td>
-            <td class="num-col">0.000</td>
-            <td class="num-col">—</td>
+            <td class="mono-cell"><strong>${sc.isolated_weighted_accuracy.toFixed(2)}%</strong></td>
+            <td class="mono-cell">${sc.isolated_weighted_macro_f1.toFixed(2)}%</td>
+            <td class="mono-cell">${(sc.isolated_weighted_accuracy - sc.centralized_accuracy).toFixed(2)}%</td>
+            <td class="mono-cell">0.00%</td>
+            <td class="mono-cell">0.00</td>
+            <td class="mono-cell">—</td>
           </tr>`;
 
       sc.per_algorithm_scores.forEach((entry, idx) => {
-        const highlight = idx === 0 ? 'style="background: #eff6ff;"' : '';
-        const signDelta = entry.delta_vs_centralized >= 0 ? '+' : '';
-        const signGain = entry.gain_over_isolated >= 0 ? '+' : '';
-        html += `<tr ${highlight}>
-          <td><strong>${entry.algorithm_name}</strong> ${idx === 0 ? '<span class="badge" style="margin-left:6px;">BEST</span>' : ''}</td>
-          <td class="num-col"><strong>${entry.test_accuracy.toFixed(2)}%</strong></td>
-          <td class="num-col">${entry.test_macro_f1.toFixed(2)}%</td>
-          <td class="num-col">${signDelta}${entry.delta_vs_centralized.toFixed(2)}%</td>
-          <td class="num-col">${signGain}${entry.gain_over_isolated.toFixed(2)}%</td>
-          <td class="num-col">${entry.comm_mib.toFixed(3)}</td>
-          <td class="num-col"><strong>${entry.fvi_score.toFixed(1)}</strong></td>
+        const sDelta = entry.delta_vs_centralized >= 0 ? '+' : '';
+        const sGain = entry.gain_over_isolated >= 0 ? '+' : '';
+        const rowStyle = idx === 0 ? 'style="background: var(--accent-subtle);"' : '';
+        html += `<tr ${rowStyle}>
+          <td><strong>${entry.algorithm_name}</strong></td>
+          <td class="mono-cell"><strong>${entry.test_accuracy.toFixed(2)}%</strong></td>
+          <td class="mono-cell">${entry.test_macro_f1.toFixed(2)}%</td>
+          <td class="mono-cell">${sDelta}${entry.delta_vs_centralized.toFixed(2)}%</td>
+          <td class="mono-cell">${sGain}${entry.gain_over_isolated.toFixed(2)}%</td>
+          <td class="mono-cell">${entry.comm_mib.toFixed(2)}</td>
+          <td class="mono-cell"><strong>${entry.fvi_score.toFixed(1)}</strong></td>
         </tr>`;
       });
 
       html += '</tbody></table>';
-      document.getElementById('results-table-wrap').innerHTML = html;
+      document.getElementById('res-table-box').innerHTML = html;
+      document.getElementById('res-dashboard-img').src = result.dashboard_chart_base64;
 
-      document.getElementById('dashboard-chart-img').src = result.dashboard_chart_base64;
-      sec.scrollIntoView({ behavior: 'smooth' });
+      resSec.scrollIntoView({ behavior: 'smooth' });
     }
 
-    function downloadMarkdownReport() {
-      if (!latestResult) return;
-      const blob = new Blob([latestResult.markdown_report], { type: 'text/markdown;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
+    function exportMarkdown() {
+      if (!latestBenchmarkResult) return;
+      const blob = new Blob([latestBenchmarkResult.markdown_report], { type: 'text/markdown;charset=utf-8' });
       const a = document.createElement('a');
-      a.href = url;
-      a.download = 'fvi_benchmark_report.md';
+      a.href = URL.createObjectURL(blob);
+      a.download = 'fvi_viability_report.md';
       a.click();
     }
 
-    function downloadJsonResults() {
-      if (!latestResult) return;
-      const clean = Object.assign({}, latestResult);
-      delete clean.partition_chart_base64;
-      delete clean.dashboard_chart_base64;
-      const blob = new Blob([JSON.stringify(clean, null, 2)], { type: 'application/json;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
+    function exportJson() {
+      if (!latestBenchmarkResult) return;
+      const copy = Object.assign({}, latestBenchmarkResult);
+      delete copy.partition_chart_base64;
+      delete copy.dashboard_chart_base64;
+      const blob = new Blob([JSON.stringify(copy, null, 2)], { type: 'application/json;charset=utf-8' });
       const a = document.createElement('a');
-      a.href = url;
-      a.download = 'fvi_benchmark_results.json';
+      a.href = URL.createObjectURL(blob);
+      a.download = 'fvi_viability_metrics.json';
       a.click();
     }
 
-    window.addEventListener('DOMContentLoaded', async () => {
-      await loadSystemStatus();
-      await inspectDataset();
-    });
+    window.addEventListener('DOMContentLoaded', fetchSystemStatus);
   </script>
 </body>
 </html>

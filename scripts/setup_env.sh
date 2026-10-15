@@ -1,13 +1,5 @@
 #!/usr/bin/env bash
-# =============================================================================
-# Automated Environment Setup Script for FedAssess (`fvi-platform`)
-# Works on `rama` (NVIDIA L40S) and on local Ubuntu / collaborator machines.
-#
-# Usage:
-#   bash scripts/setup_env.sh [env_name]
-# =============================================================================
 set -euo pipefail
-
 ENV_NAME="${1:-fvi-env}"
 PYTHON_VER="3.11"
 

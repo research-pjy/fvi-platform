@@ -1,36 +1,37 @@
 #!/usr/bin/env python3
 """
-FastAPI Web Server & REST API for the Federated Viability Index (`fvi-platform`).
+FastAPI Web Server & REST API for FedAssess (`fvi-platform`).
 
 Supports:
-  1. Primary Mode (FastAPI + Uvicorn):
-     When `fastapi` and `uvicorn` are installed (via `conda env create -f environment.yml`
-     or `pip install -r requirements.txt`), runs the native `FastAPI` application
-     (`fastapi_app`) via Uvicorn!
-     Can be started with either:
-       python app/server.py --port 8080
-     or directly via Uvicorn CLI:
-       uvicorn app.server:fastapi_app --host 127.0.0.1 --port 8080
-
-  2. Fallback Mode (Standard-Library ThreadingHTTPServer):
-     If started in an environment before `fastapi` is installed, automatically
-     falls back to `ThreadingHTTPServer` with the exact same REST API endpoints.
+  1. True Drag-and-Drop Binary Uploads (`POST /api/upload-dataset`):
+     - Accepts `.csv` files (tabular datasets or image manifests) and `.zip`
+       archives (containing class subfolders of images for ImageFolder tasks)
+     - Streams uploaded files directly into `data/uploads/` on `rama`
+     - Automatically extracts `.zip` image archives and locates the class-folder root
+  2. Native FastAPI + Uvicorn execution (`python app/server.py --port 8080`)
+     with automatic standard-library `ThreadingHTTPServer` fallback.
 """
 
 from __future__ import annotations
 
 import argparse
+import cgi
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import io
 import json
 import os
 from pathlib import Path
 import platform
+import re
+import shutil
 import socket
 import sys
 import threading
+import time
 import traceback
 from typing import Any, Dict
 from urllib.parse import urlparse
+import zipfile
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR / "src") not in sys.path:
@@ -44,13 +45,12 @@ from fvi.config import (
     ModelConfig,
     PartitionConfig,
 )
-from fvi.ingestion.sample_datasets import ensure_sample_datasets_exist
-from fvi.ingestion.schema import inspect_dataset_source
+from fvi.ingestion.schema import IMAGE_EXTENSIONS, inspect_dataset_source
 from fvi.models.factory import TORCH_AVAILABLE
 from fvi.pipeline import preview_partition_only, run_fvi_benchmark_pipeline
 
 try:
-    from fastapi import FastAPI, HTTPException, Request
+    from fastapi import FastAPI, File, HTTPException, Request, UploadFile
     from fastapi.responses import HTMLResponse, JSONResponse
     import uvicorn
 
@@ -74,7 +74,7 @@ _JOB_STATE: Dict[str, Any] = {
 
 
 def get_system_status() -> Dict[str, Any]:
-    """Returns hardware, environment, and web framework status for the UI header."""
+    """Returns hardware, environment, and disk space metadata for the UI header."""
     hostname = socket.gethostname()
     conda_env = (
         os.environ.get("CONDA_DEFAULT_ENV")
@@ -84,7 +84,7 @@ def get_system_status() -> Dict[str, Any]:
     if "/" in conda_env:
         conda_env = Path(conda_env).name
 
-    gpu_name = "CPU Mode"
+    gpu_name = "CPU"
     vram_gib = 0.0
     bf16_ok = False
 
@@ -99,19 +99,98 @@ def get_system_status() -> Dict[str, Any]:
         else:
             gpu_name = "PyTorch CPU"
 
-    sample_paths = ensure_sample_datasets_exist(DATA_DIR)
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    disk_free_gib = round(shutil.disk_usage(UPLOADS_DIR).free / (1024.0 ** 3), 1)
+
     return {
         "hostname": hostname,
-        "is_rama": "rama" in hostname.lower(),
         "conda_env": conda_env,
         "python_version": platform.python_version(),
-        "web_framework": "FastAPI + Uvicorn" if FASTAPI_AVAILABLE else "Standard HTTP",
-        "backend": "PyTorch" if TORCH_AVAILABLE else "NumPy Engine",
+        "web_framework": "FastAPI" if FASTAPI_AVAILABLE else "HTTP",
+        "backend": "PyTorch" if TORCH_AVAILABLE else "NumPy",
         "gpu_name": gpu_name,
         "vram_gib": vram_gib,
         "bf16_supported": bf16_ok,
-        "sample_datasets": sample_paths,
+        "disk_free_gib": disk_free_gib,
+        "uploads_dir": str(UPLOADS_DIR),
     }
+
+
+def _sanitize_filename(name: str) -> str:
+    clean = re.sub(r"[^A-Za-z0-9._-]", "_", Path(name).name)
+    return clean or f"dataset_{int(time.time())}.csv"
+
+
+def _find_image_folder_root(extract_dir: Path) -> Path:
+    """
+    Walks an extracted `.zip` directory to find the folder whose subdirectories
+    are class folders containing images (ignoring `__MACOSX` or single wrapper folders).
+    """
+    candidates = [extract_dir] + [
+        p for p in extract_dir.rglob("*") if p.is_dir() and "__MACOSX" not in p.parts
+    ]
+    for cand in candidates:
+        subdirs = [
+            d
+            for d in cand.iterdir()
+            if d.is_dir() and not d.name.startswith(".") and d.name != "__MACOSX"
+        ]
+        if not subdirs:
+            continue
+        has_images = any(
+            any(
+                f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS
+                for f in sd.iterdir()
+            )
+            for sd in subdirs
+        )
+        if has_images:
+            return cand
+    return extract_dir
+
+
+def save_uploaded_dataset_bytes(filename: str, raw_bytes: bytes) -> Dict[str, Any]:
+    """
+    Saves an uploaded `.csv` file or extracts an uploaded `.zip` archive into
+    `data/uploads/` on `rama`, then inspects and returns its schema report.
+    """
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    safe_name = _sanitize_filename(filename)
+    suffix = Path(safe_name).suffix.lower()
+
+    if suffix == ".zip":
+        stem = Path(safe_name).stem
+        extract_target = UPLOADS_DIR / stem
+        if extract_target.exists():
+            shutil.rmtree(extract_target)
+        extract_target.mkdir(parents=True, exist_ok=True)
+
+        with zipfile.ZipFile(io.BytesIO(raw_bytes)) as zf:
+            zf.extractall(extract_target)
+
+        img_root = _find_image_folder_root(extract_target)
+        rel_path = str(img_root.relative_to(ROOT_DIR))
+        report = inspect_dataset_source(img_root)
+        rep_dict = report.to_dict()
+        rep_dict["data_path"] = rel_path
+        rep_dict["uploaded_filename"] = safe_name
+        rep_dict["uploaded_size_mb"] = round(len(raw_bytes) / (1024.0 ** 2), 2)
+        return rep_dict
+
+    if suffix == ".csv":
+        saved_path = UPLOADS_DIR / safe_name
+        saved_path.write_bytes(raw_bytes)
+        rel_path = f"data/uploads/{safe_name}"
+        report = inspect_dataset_source(saved_path)
+        rep_dict = report.to_dict()
+        rep_dict["data_path"] = rel_path
+        rep_dict["uploaded_filename"] = safe_name
+        rep_dict["uploaded_size_mb"] = round(len(raw_bytes) / (1024.0 ** 2), 2)
+        return rep_dict
+
+    raise ValueError(
+        f"Unsupported file format '{suffix}'. Please drop a .csv file (tabular) or a .zip archive of class folders (images)."
+    )
 
 
 def _parse_job_config(payload: Dict[str, Any]) -> FVJobConfig:
@@ -120,7 +199,10 @@ def _parse_job_config(payload: Dict[str, Any]) -> FVJobConfig:
     mod_raw = payload.get("model", {})
     bench_raw = payload.get("benchmark", {})
 
-    raw_path = str(ds_raw.get("data_path", "data/pe_malware_features.csv"))
+    raw_path = str(ds_raw.get("data_path", "")).strip()
+    if not raw_path:
+        raise ValueError("No dataset selected. Please drop a dataset file first.")
+
     resolved_path = Path(raw_path)
     if not resolved_path.is_absolute() and not resolved_path.exists():
         resolved_path = ROOT_DIR / raw_path
@@ -128,7 +210,7 @@ def _parse_job_config(payload: Dict[str, Any]) -> FVJobConfig:
     ds_cfg = DatasetConfig(
         data_path=str(resolved_path),
         modality=str(ds_raw.get("modality", "auto")),
-        target_column=str(ds_raw.get("target_column", "malware_family")),
+        target_column=str(ds_raw.get("target_column", "")),
         feature_columns=ds_raw.get("feature_columns", ["all"]),
         image_path_column=ds_raw.get("image_path_column", "image_path"),
         image_size=int(ds_raw.get("image_size", 32)),
@@ -213,19 +295,15 @@ def _background_benchmark_worker(job_cfg: FVJobConfig) -> None:
             _JOB_STATE["message"] = f"Error: {exc}"
 
 
-# ============================================================================
-# Native FastAPI Application (`fastapi_app`)
-# ============================================================================
-
 if FASTAPI_AVAILABLE:
     fastapi_app = FastAPI(
-        title="FedAssess — Federated Viability Index (FVI) API",
-        version="0.1.0",
+        title="FedAssess — Federated Viability Index (FVI)",
+        version="0.3.0",
     )
 
     @fastapi_app.on_event("startup")
     def _on_startup() -> None:
-        ensure_sample_datasets_exist(DATA_DIR)
+        UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
     @fastapi_app.get("/", response_class=HTMLResponse)
     async def serve_index() -> HTMLResponse:
@@ -241,10 +319,35 @@ if FASTAPI_AVAILABLE:
         with _JOB_LOCK:
             return JSONResponse(content=dict(_JOB_STATE))
 
+    @fastapi_app.post("/api/upload-dataset")
+    async def api_upload_dataset(file: UploadFile = File(...)) -> JSONResponse:
+        try:
+            raw_bytes = await file.read()
+            if not raw_bytes:
+                return JSONResponse(
+                    content={"error": "Uploaded file is empty."}, status_code=400
+                )
+            rep_dict = save_uploaded_dataset_bytes(
+                file.filename or "dataset.csv", raw_bytes
+            )
+            return JSONResponse(content=rep_dict)
+        except Exception as exc:
+            return JSONResponse(content={"error": str(exc)}, status_code=400)
+
+    @fastapi_app.post("/api/upload-csv")
+    async def api_upload_csv_json(request: Request) -> JSONResponse:
+        payload = await request.json()
+        filename = str(payload.get("filename", "dataset.csv"))
+        content = str(payload.get("content", ""))
+        if not content.strip():
+            raise HTTPException(status_code=400, detail="Uploaded CSV is empty.")
+        rep_dict = save_uploaded_dataset_bytes(filename, content.encode("utf-8"))
+        return JSONResponse(content=rep_dict)
+
     @fastapi_app.post("/api/inspect-dataset")
     async def api_inspect_dataset(request: Request) -> JSONResponse:
         payload = await request.json()
-        raw_path = str(payload.get("data_path", "data/pe_malware_features.csv"))
+        raw_path = str(payload.get("data_path", "")).strip()
         target_col = payload.get("target_column")
         p = Path(raw_path)
         if not p.is_absolute() and not p.exists():
@@ -253,22 +356,6 @@ if FASTAPI_AVAILABLE:
         report_dict = report.to_dict()
         report_dict["data_path"] = raw_path
         return JSONResponse(content=report_dict)
-
-    @fastapi_app.post("/api/upload-csv")
-    async def api_upload_csv(request: Request) -> JSONResponse:
-        payload = await request.json()
-        filename = Path(str(payload.get("filename", "custom_upload.csv"))).name
-        content = str(payload.get("content", ""))
-        if not content.strip():
-            raise HTTPException(status_code=400, detail="Uploaded CSV content is empty.")
-        UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-        saved_path = UPLOADS_DIR / filename
-        saved_path.write_text(content, encoding="utf-8")
-        rel_path = f"data/uploads/{filename}"
-        report = inspect_dataset_source(saved_path)
-        rep_dict = report.to_dict()
-        rep_dict["data_path"] = rel_path
-        return JSONResponse(content=rep_dict)
 
     @fastapi_app.post("/api/preview-partition")
     async def api_preview_partition(request: Request) -> JSONResponse:
@@ -296,12 +383,12 @@ if FASTAPI_AVAILABLE:
         with _JOB_LOCK:
             if _JOB_STATE["running"]:
                 return JSONResponse(
-                    content={"error": "A benchmark job is already running."},
+                    content={"error": "A benchmark is currently in progress."},
                     status_code=409,
                 )
             _JOB_STATE["running"] = True
             _JOB_STATE["progress"] = 2
-            _JOB_STATE["message"] = "Initializing Federated Viability Benchmark..."
+            _JOB_STATE["message"] = "Preparing Federated Viability evaluation..."
             _JOB_STATE["error"] = None
             _JOB_STATE["result"] = None
 
@@ -310,11 +397,6 @@ if FASTAPI_AVAILABLE:
         )
         t.start()
         return JSONResponse(content={"status": "started"})
-
-
-# ============================================================================
-# Standard-Library HTTP Fallback (Used if FastAPI is not installed yet)
-# ============================================================================
 
 
 class FVIRequestHandler(BaseHTTPRequestHandler):
@@ -359,14 +441,49 @@ class FVIRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         route = urlparse(self.path).path
+
+        if route == "/api/upload-dataset":
+            ctype = self.headers.get("Content-Type", "")
+            if "multipart/form-data" in ctype:
+                form = cgi.FieldStorage(
+                    fp=self.rfile,
+                    headers=self.headers,
+                    environ={
+                        "REQUEST_METHOD": "POST",
+                        "CONTENT_TYPE": ctype,
+                    },
+                )
+                if "file" not in form:
+                    self._send_json({"error": "Missing file field."}, status=400)
+                    return
+                file_item = form["file"]
+                filename = file_item.filename or "dataset.csv"
+                raw_bytes = file_item.file.read()
+                try:
+                    rep = save_uploaded_dataset_bytes(filename, raw_bytes)
+                    self._send_json(rep)
+                except Exception as exc:
+                    self._send_json({"error": str(exc)}, status=400)
+                return
+
         try:
             payload = self._read_json_body()
         except Exception as exc:
             self._send_json({"error": f"Invalid JSON: {exc}"}, status=400)
             return
 
+        if route == "/api/upload-csv":
+            try:
+                filename = str(payload.get("filename", "dataset.csv"))
+                content = str(payload.get("content", ""))
+                rep = save_uploaded_dataset_bytes(filename, content.encode("utf-8"))
+                self._send_json(rep)
+            except Exception as exc:
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
         if route == "/api/inspect-dataset":
-            raw_path = str(payload.get("data_path", "data/pe_malware_features.csv"))
+            raw_path = str(payload.get("data_path", "")).strip()
             target_col = payload.get("target_column")
             p = Path(raw_path)
             if not p.is_absolute() and not p.exists():
@@ -374,22 +491,6 @@ class FVIRequestHandler(BaseHTTPRequestHandler):
             report = inspect_dataset_source(p, target_column=target_col)
             rep_dict = report.to_dict()
             rep_dict["data_path"] = raw_path
-            self._send_json(rep_dict)
-            return
-
-        if route == "/api/upload-csv":
-            filename = Path(str(payload.get("filename", "custom_upload.csv"))).name
-            content = str(payload.get("content", ""))
-            if not content.strip():
-                self._send_json({"error": "Empty CSV content"}, status=400)
-                return
-            UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-            saved_path = UPLOADS_DIR / filename
-            saved_path.write_text(content, encoding="utf-8")
-            rel_path = f"data/uploads/{filename}"
-            report = inspect_dataset_source(saved_path)
-            rep_dict = report.to_dict()
-            rep_dict["data_path"] = rel_path
             self._send_json(rep_dict)
             return
 
@@ -420,7 +521,7 @@ class FVIRequestHandler(BaseHTTPRequestHandler):
                     return
                 _JOB_STATE["running"] = True
                 _JOB_STATE["progress"] = 2
-                _JOB_STATE["message"] = "Initializing Federated Viability Benchmark..."
+                _JOB_STATE["message"] = "Preparing Federated Viability evaluation..."
                 _JOB_STATE["error"] = None
                 _JOB_STATE["result"] = None
 
@@ -435,16 +536,16 @@ class FVIRequestHandler(BaseHTTPRequestHandler):
 
 
 def run_server(host: str = "127.0.0.1", port: int = 8080) -> None:
-    ensure_sample_datasets_exist(DATA_DIR)
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
     status = get_system_status()
     print("=" * 74)
-    print("  FEDASSESS — FEDERATED VIABILITY INDEX (FVI) WEB PLATFORM")
+    print("  FEDASSESS — FEDERATED VIABILITY INDEX (FVI) PLATFORM")
     print("=" * 74)
     print(f"  Host / Node      : {status['hostname']} (Env: {status['conda_env']})")
     print(f"  Web Framework    : {status['web_framework']}")
     print(f"  Compute Device   : {status['gpu_name']} ({status['backend']}, BF16: {status['bf16_supported']})")
-    print(f"  Local URL        : http://{host}:{port}")
-    print(f"  SSH Tunnel Cmd   : ssh -L {port}:127.0.0.1:{port} <user>@rama")
+    print(f"  Uploads Storage  : {status['uploads_dir']} ({status['disk_free_gib']} GiB free)")
+    print(f"  Web URL          : http://{host}:{port}")
     print("=" * 74)
 
     if FASTAPI_AVAILABLE:
@@ -460,7 +561,7 @@ def run_server(host: str = "127.0.0.1", port: int = 8080) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Start the FedAssess FVI Web Platform Server.")
-    parser.add_argument("--host", type=str, default="127.0.0.1", help="Bind address (default: 127.0.0.1)")
+    parser.add_argument("--host", type=str, default="127.0.0.1", help="Bind address (use 0.0.0.0 on rama for LAN access)")
     parser.add_argument("--port", type=int, default=8080, help="Port number (default: 8080)")
     args = parser.parse_args()
     run_server(host=args.host, port=args.port)
